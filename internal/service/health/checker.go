@@ -176,16 +176,9 @@ func (c *Checker) checkHost(host *model.SSHHost) {
 
 	// 更新滑动窗口
 	c.mu.Lock()
-	// 综合检测结果：所有检测都成功才算成功
-	overallSuccess := tcpResult.Success && sshResult.Success
-	if len(tunnelResults) > 0 {
-		for _, r := range tunnelResults {
-			if !r.Success {
-				overallSuccess = false
-				break
-			}
-		}
-	}
+	// 综合检测结果：TCP 检测成功即可认为 Host 健康
+	// SSH 连接和 Tunnel 检测用于转发功能，不影响 Host 健康状态
+	overallSuccess := tcpResult.Success
 
 	c.checkWindows[host.ID] = append(c.checkWindows[host.ID], windowEntry{
 		result:    CheckResult{Success: overallSuccess, LatencyMs: avgLatency},

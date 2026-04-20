@@ -1,8 +1,8 @@
 <template>
-  <div class="space-y-6">
+  <div class="h-full flex flex-col space-y-6">
     <!-- 页面标题 -->
-    <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">健康度历史</h1>
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <h1 class="text-xl sm:text-2xl font-bold text-gray-900">健康度历史</h1>
     </div>
 
     <!-- 控制面板 -->

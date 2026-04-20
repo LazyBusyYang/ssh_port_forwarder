@@ -1,11 +1,11 @@
 <template>
-  <div class="p-6">
+  <div class="h-full flex flex-col">
     <!-- 页面标题和操作按钮 -->
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">SSH Hosts</h1>
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+      <h1 class="text-xl sm:text-2xl font-bold text-gray-800">SSH Hosts</h1>
       <button
         @click="openCreateModal"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors whitespace-nowrap"
       >
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -35,9 +35,10 @@
       <p class="text-gray-500 mb-4">暂无 SSH Host，点击上方按钮创建</p>
     </div>
 
-    <!-- 主机列表表格 -->
-    <div v-else class="bg-white rounded-lg shadow overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
+    <!-- 主机列表表格 - 添加水平滚动 -->
+    <div v-else class="bg-white rounded-lg shadow overflow-hidden flex-1 flex flex-col min-h-0">
+      <div class="overflow-x-auto flex-1">
+        <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
@@ -87,10 +88,11 @@
             </td>
           </tr>
         </tbody>
-      </table>
+        </table>
+      </div>
 
       <!-- 分页 -->
-      <div class="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
+      <div class="bg-gray-50 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 gap-2">
         <div class="text-sm text-gray-500">
           共 {{ total }} 条记录，第 {{ page }} 页
         </div>
@@ -113,9 +115,9 @@
       </div>
     </div>
 
-    <!-- 创建/编辑弹窗 -->
-    <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+    <!-- 创建/编辑弹窗 - 响应式改进 -->
+    <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h2 class="text-lg font-semibold text-gray-800">{{ isEditing ? '编辑 Host' : '新建 Host' }}</h2>
           <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
