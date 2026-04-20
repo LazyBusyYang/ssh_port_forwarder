@@ -55,6 +55,10 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	case "mysql":
 		dbType = "mysql"
 		dsn = cfg.Database.MySQL.DSN
+		// ENV 兜底：如果配置文件中没有设置 DSN，从环境变量读取
+		if dsn == "" {
+			dsn = os.Getenv("SPF_DB_DSN")
+		}
 	default:
 		return nil, fmt.Errorf("unsupported database type: %s", cfg.Database.Type)
 	}
@@ -81,11 +85,17 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	auditRepo := repository.NewAuditLogRepository(adapter.DB)
 	log.Printf("[Container] Repositories initialized")
 
-	// 5. 创建 AuthService
+	// 5. 创建 AuthService（JWT 密钥支持环境变量兜底）
+	if cfg.JWT.SecretCurrent == "" {
+		cfg.JWT.SecretCurrent = os.Getenv("JWT_SECRET_CURRENT")
+	}
 	authService := NewAuthService(userRepo, cfg.JWT)
 	log.Printf("[Container] AuthService created")
 
-	// 6. 创建 SSH Manager
+	// 6. 创建 SSH Manager（加密密钥支持环境变量兜底）
+	if cfg.Encryption.Key == "" {
+		cfg.Encryption.Key = os.Getenv("SPF_ENCRYPTION_KEY")
+	}
 	sshManager := ssh_manager.NewManager(hostRepo, ruleRepo, cfg.Encryption)
 	log.Printf("[Container] SSH Manager created")
 

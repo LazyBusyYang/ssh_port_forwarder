@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -108,6 +109,7 @@ func (h *RuleHandler) Create(c *gin.Context) {
 	host, err := h.container.LBPool.AssignHostForRule(rule)
 	if err != nil {
 		// 没有可用的 Host，保持 inactive 状态
+		log.Printf("[RuleHandler] Failed to assign host for rule %d: %v", rule.ID, err)
 		response.Success(c, rule)
 		return
 	}
@@ -292,6 +294,7 @@ func (h *RuleHandler) Restart(c *gin.Context) {
 	host, err := h.container.LBPool.AssignHostForRule(rule)
 	if err != nil {
 		// 没有可用的 Host，标记为 inactive
+		log.Printf("[RuleHandler] Failed to assign host for rule %d restart: %v", rule.ID, err)
 		if err := h.container.RuleRepo.UpdateStatus(rule.ID, "inactive"); err != nil {
 			response.Error(c, http.StatusInternalServerError, 500, "failed to update rule status: "+err.Error())
 			return

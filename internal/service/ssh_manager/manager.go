@@ -203,6 +203,23 @@ func (m *Manager) StopForwardRule(ruleID uint64, hostID uint64) error {
 	return nil
 }
 
+// parsePrivateKey 解析私钥，支持多种格式：
+// - PKCS#1: -----BEGIN RSA PRIVATE KEY-----
+// - PKCS#8: -----BEGIN PRIVATE KEY-----
+// - OpenSSH new format: -----BEGIN OPENSSH PRIVATE KEY-----
+// - EC: -----BEGIN EC PRIVATE KEY-----
+func parsePrivateKey(keyData []byte) (ssh.Signer, error) {
+	// 首先尝试标准解析（支持大多数格式，包括 OpenSSH 新格式）
+	signer, err := ssh.ParsePrivateKey(keyData)
+	if err == nil {
+		return signer, nil
+	}
+
+	// 如果失败，尝试使用 passphrase 解析（可能需要处理加密私钥）
+	// 注意：当前不支持带密码的私钥，如果需要可以扩展
+	return nil, fmt.Errorf("unable to parse private key: %w (supported formats: PKCS#1, PKCS#8, OpenSSH new format)", err)
+}
+
 // buildSSHConfig 构建 SSH 配置
 // - 解密凭证
 // - HostKeyCallback 使用 ssh.InsecureIgnoreHostKey()（生产环境可配置）
@@ -226,7 +243,7 @@ func (m *Manager) buildSSHConfig(host *model.SSHHost) (*ssh.ClientConfig, error)
 		authMethod = ssh.Password(authData)
 
 	case "private_key":
-		signer, err := ssh.ParsePrivateKey([]byte(authData))
+		signer, err := parsePrivateKey([]byte(authData))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse private key: %w", err)
 		}
