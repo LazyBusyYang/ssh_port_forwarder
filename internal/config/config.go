@@ -109,6 +109,7 @@ func bindEnvVariables(v *viper.Viper) {
 	v.AutomaticEnv()
 
 	// 显式绑定特定的环境变量
+	_ = v.BindEnv("database.mysql.dsn", "SPF_DB_DSN")
 	_ = v.BindEnv("encryption.key", "SPF_ENCRYPTION_KEY")
 	_ = v.BindEnv("encryption.key_previous", "SPF_ENCRYPTION_KEY_PREVIOUS")
 	_ = v.BindEnv("jwt.secret_current", "JWT_SECRET_CURRENT")
