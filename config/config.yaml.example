@@ -1,0 +1,25 @@
+server:
+  host: 0.0.0.0
+  port: 8080
+  env: production
+
+database:
+  type: sqlite          # sqlite / mysql
+  sqlite:
+    path: ./data/spf.db
+  mysql:
+    dsn: root:password@tcp(host:port)/db?charset=utf8mb4
+
+jwt:
+  secret_current: your_jwt_secret_key
+  secret_previous: ""
+  token_expire: 86400
+  refresh_expire: 604800
+
+encryption:
+  key: your_32_byte_base64_encoded_key
+  key_previous: ""
+
+port_range:
+  min: 30000
+  max: 33000

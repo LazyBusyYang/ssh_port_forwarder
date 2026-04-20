@@ -1,0 +1,7 @@
+.git
+.qoder
+web/node_modules
+web/dist
+data/
+*.db
+*.md
