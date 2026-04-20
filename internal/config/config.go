@@ -9,11 +9,12 @@ import (
 
 // Config 根配置
 type Config struct {
-	Server     ServerConfig     `mapstructure:"server"`
-	Database   DatabaseConfig   `mapstructure:"database"`
-	JWT        JWTConfig        `mapstructure:"jwt"`
-	Encryption EncryptionConfig `mapstructure:"encryption"`
-	PortRange  PortRangeConfig  `mapstructure:"port_range"`
+	Server        ServerConfig        `mapstructure:"server"`
+	Database      DatabaseConfig      `mapstructure:"database"`
+	JWT           JWTConfig           `mapstructure:"jwt"`
+	Encryption    EncryptionConfig    `mapstructure:"encryption"`
+	PortRange     PortRangeConfig     `mapstructure:"port_range"`
+	DataRetention DataRetentionConfig `mapstructure:"data_retention"`
 }
 
 type ServerConfig struct {
@@ -51,6 +52,10 @@ type EncryptionConfig struct {
 type PortRangeConfig struct {
 	Min int `mapstructure:"min"` // 默认 30000
 	Max int `mapstructure:"max"` // 默认 33000
+}
+
+type DataRetentionConfig struct {
+	HealthHistoryDays int `mapstructure:"health_history_days"` // 健康历史记录保留天数，默认 7 天
 }
 
 // Load 加载配置文件
@@ -99,6 +104,9 @@ func setDefaults(v *viper.Viper) {
 	// PortRange 默认值
 	v.SetDefault("port_range.min", 30000)
 	v.SetDefault("port_range.max", 33000)
+
+	// DataRetention 默认值
+	v.SetDefault("data_retention.health_history_days", 7)
 }
 
 // bindEnvVariables 绑定环境变量
@@ -116,4 +124,5 @@ func bindEnvVariables(v *viper.Viper) {
 	_ = v.BindEnv("jwt.secret_previous", "JWT_SECRET_PREVIOUS")
 	_ = v.BindEnv("port_range.min", "SPF_PORT_RANGE_MIN")
 	_ = v.BindEnv("port_range.max", "SPF_PORT_RANGE_MAX")
+	_ = v.BindEnv("data_retention.health_history_days", "SPF_HEALTH_HISTORY_RETENTION_DAYS")
 }

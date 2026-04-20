@@ -76,6 +76,9 @@ func (s *Scheduler) Start() {
 	// 6. Cleanup Audit Log（每 1h）
 	s.runTicker("CleanupAuditLog", 1*time.Hour, s.runCleanupAuditLog)
 
+	// 7. Cleanup Health History（每 1h）
+	s.runTicker("CleanupHealthHistory", 1*time.Hour, s.runCleanupHealthHistory)
+
 	log.Printf("[Scheduler] All scheduled tasks started")
 }
 
@@ -242,5 +245,21 @@ func (s *Scheduler) runCleanupAuditLog() {
 		log.Printf("[Scheduler] Failed to cleanup audit logs: %v", err)
 	} else {
 		log.Printf("[Scheduler] Audit logs cleaned up (before %d)", cutoffTime)
+	}
+}
+
+// runCleanupHealthHistory 清理超过配置天数的健康历史记录
+func (s *Scheduler) runCleanupHealthHistory() {
+	retentionDays := s.config.DataRetention.HealthHistoryDays
+	if retentionDays <= 0 {
+		retentionDays = 7 // 兜底默认值
+	}
+
+	cutoffTime := time.Now().Add(-time.Duration(retentionDays) * 24 * time.Hour).Unix()
+
+	if err := s.healthRepo.DeleteBefore(cutoffTime); err != nil {
+		log.Printf("[Scheduler] Failed to cleanup health history: %v", err)
+	} else {
+		log.Printf("[Scheduler] Health history cleaned up (before %d, retention: %d days)", cutoffTime, retentionDays)
 	}
 }
