@@ -18,11 +18,11 @@ func NewStatusHandler(c *service.Container) *StatusHandler {
 }
 
 type OverviewResponse struct {
-	TotalHosts        int     `json:"total_hosts"`
-	HealthyHosts      int     `json:"healthy_hosts"`
-	TotalRules        int     `json:"total_rules"`
-	ActiveRules       int     `json:"active_rules"`
-	ActiveConnections int     `json:"active_connections"`
+	TotalHosts        int `json:"total_hosts"`
+	HealthyHosts      int `json:"healthy_hosts"`
+	TotalRules        int `json:"total_rules"`
+	ActiveRules       int `json:"active_rules"`
+	ActiveConnections int `json:"active_connections"`
 }
 
 // Overview 返回系统总览统计
@@ -87,16 +87,16 @@ func (h *StatusHandler) Hosts(c *gin.Context) {
 	clients := h.container.SSHManager.GetAllClients()
 
 	type HostStatus struct {
-		ID              uint64  `json:"id"`
-		Name            string  `json:"name"`
-		Host            string  `json:"host"`
-		Port            int     `json:"port"`
-		Username        string  `json:"username"`
-		HealthStatus    string  `json:"health_status"`
-		HealthScore     float64 `json:"health_score"`
-		Connected       bool    `json:"connected"`
-		LastCheckAt     int64   `json:"last_check_at"`
-		LastSuccessAt   int64   `json:"last_success_at"`
+		ID            uint64  `json:"id"`
+		Name          string  `json:"name"`
+		Host          string  `json:"host"`
+		Port          int     `json:"port"`
+		Username      string  `json:"username"`
+		HealthStatus  string  `json:"health_status"`
+		HealthScore   float64 `json:"health_score"`
+		Connected     bool    `json:"connected"`
+		LastCheckAt   int64   `json:"last_check_at"`
+		LastSuccessAt int64   `json:"last_success_at"`
 	}
 
 	var result []HostStatus
@@ -142,16 +142,24 @@ func (h *StatusHandler) Rules(c *gin.Context) {
 	}
 
 	type RuleStatus struct {
-		ID           uint64 `json:"id"`
-		GroupID      uint64 `json:"group_id"`
-		LocalPort    int    `json:"local_port"`
-		TargetHost   string `json:"target_host"`
-		TargetPort   int    `json:"target_port"`
-		Protocol     string `json:"protocol"`
-		Status       string `json:"status"`
-		ActiveHostID uint64 `json:"active_host_id"`
-		ActiveHostName string `json:"active_host_name"`
+		ID              uint64 `json:"id"`
+		GroupID         uint64 `json:"group_id"`
+		LocalPort       int    `json:"local_port"`
+		TargetHost      string `json:"target_host"`
+		TargetPort      int    `json:"target_port"`
+		Protocol        string `json:"protocol"`
+		Status          string `json:"status"`
+		ActiveHostID    uint64 `json:"active_host_id"`
+		ActiveHostName  string `json:"active_host_name"`
+		HealthStatus    string `json:"health_status"`
+		LocalReachable  bool   `json:"local_reachable"`
+		EndToEndOK      bool   `json:"end_to_end_ok"`
+		FallbackUsed    bool   `json:"fallback_used"`
+		HealthReason    string `json:"health_reason,omitempty"`
+		HealthCheckedAt int64  `json:"health_checked_at,omitempty"`
 	}
+
+	ruleHealthMap := h.container.HealthChecker.GetRuleHealthSnapshot()
 
 	var result []RuleStatus
 	for _, rule := range rules {
@@ -159,17 +167,32 @@ func (h *StatusHandler) Rules(c *gin.Context) {
 		if rule.ActiveHostID > 0 {
 			activeHostName = hostMap[rule.ActiveHostID]
 		}
+		ruleHealth, ok := ruleHealthMap[rule.ID]
+		healthStatus := "unknown"
+		if ok {
+			if ruleHealth.Healthy {
+				healthStatus = "healthy"
+			} else {
+				healthStatus = "unhealthy"
+			}
+		}
 
 		result = append(result, RuleStatus{
-			ID:             rule.ID,
-			GroupID:        rule.GroupID,
-			LocalPort:      rule.LocalPort,
-			TargetHost:     rule.TargetHost,
-			TargetPort:     rule.TargetPort,
-			Protocol:       rule.Protocol,
-			Status:         rule.Status,
-			ActiveHostID:   rule.ActiveHostID,
-			ActiveHostName: activeHostName,
+			ID:              rule.ID,
+			GroupID:         rule.GroupID,
+			LocalPort:       rule.LocalPort,
+			TargetHost:      rule.TargetHost,
+			TargetPort:      rule.TargetPort,
+			Protocol:        rule.Protocol,
+			Status:          rule.Status,
+			ActiveHostID:    rule.ActiveHostID,
+			ActiveHostName:  activeHostName,
+			HealthStatus:    healthStatus,
+			LocalReachable:  ruleHealth.LocalReachable,
+			EndToEndOK:      ruleHealth.EndToEndOK,
+			FallbackUsed:    ruleHealth.FallbackUsed,
+			HealthReason:    ruleHealth.Reason,
+			HealthCheckedAt: ruleHealth.CheckedAt,
 		})
 	}
 
