@@ -21,7 +21,7 @@ func (r *forwardRuleRepository) Create(rule *model.ForwardRule) error {
 
 func (r *forwardRuleRepository) FindByID(id uint64) (*model.ForwardRule, error) {
 	var rule model.ForwardRule
-	if err := r.db.First(&rule, id).Error; err != nil {
+	if err := r.db.Preload("Group").Preload("ActiveHost").First(&rule, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
@@ -46,7 +46,9 @@ func (r *forwardRuleRepository) List(page, pageSize int) ([]model.ForwardRule, i
 		return nil, 0, err
 	}
 
-	if err := r.db.Offset((page - 1) * pageSize).Limit(pageSize).Find(&rules).Error; err != nil {
+	if err := r.db.Preload("Group").Preload("ActiveHost").
+		Offset((page - 1) * pageSize).Limit(pageSize).
+		Find(&rules).Error; err != nil {
 		return nil, 0, err
 	}
 

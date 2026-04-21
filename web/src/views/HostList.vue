@@ -84,6 +84,7 @@
                 {{ testingId === host.id ? '测试中...' : '测试' }}
               </button>
               <button @click="openEditModal(host)" class="text-blue-600 hover:text-blue-900 mr-3">编辑</button>
+              <button @click="openCopyModal(host)" class="text-violet-600 hover:text-violet-900 mr-3">复制</button>
               <button @click="confirmDelete(host)" class="text-red-600 hover:text-red-900">删除</button>
             </td>
           </tr>
@@ -119,7 +120,7 @@
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 class="text-lg font-semibold text-gray-800">{{ isEditing ? '编辑 Host' : '新建 Host' }}</h2>
+          <h2 class="text-lg font-semibold text-gray-800">{{ modalTitle }}</h2>
           <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -183,34 +184,51 @@
             <select
               v-model="form.auth_method"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :disabled="isCopying"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
             >
               <option value="password">密码</option>
               <option value="private_key">私钥</option>
             </select>
+            <p v-if="isCopying" class="text-xs text-gray-500 mt-1">与源主机一致；密文在服务端复制，不经浏览器</p>
           </div>
 
           <!-- Auth Data -->
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">
               {{ form.auth_method === 'password' ? 'Password' : 'Private Key' }}
-              <span class="text-red-500">*</span>
+              <span v-if="authDataRequired" class="text-red-500">*</span>
             </label>
+            <p v-if="isCopying" class="text-xs text-gray-600 mb-2">
+              留空则沿用源主机认证密文（仅服务端复制）；填写则表示用新密码/私钥覆盖副本
+            </p>
             <input
               v-if="form.auth_method === 'password'"
               v-model="form.auth_data"
               type="password"
-              required
+              :required="authDataRequired"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="输入密码"
+              :placeholder="
+                isCopying
+                  ? '留空则服务端复制源主机密文'
+                  : isEditing && !authDataRequired
+                    ? '留空则不修改（认证方式未变更）'
+                    : '输入密码'
+              "
             />
             <textarea
               v-else
               v-model="form.auth_data"
-              required
+              :required="authDataRequired"
               rows="4"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-              placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+              :placeholder="
+                isCopying
+                  ? '留空则服务端复制源主机密文'
+                  : isEditing && !authDataRequired
+                    ? '留空则不修改（认证方式未变更）'
+                    : '-----BEGIN OPENSSH PRIVATE KEY-----'
+              "
             ></textarea>
           </div>
 
@@ -295,7 +313,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '../api'
 
 interface Host {
@@ -305,7 +323,7 @@ interface Host {
   port: number
   username: string
   auth_method: 'password' | 'private_key'
-  auth_data: string
+  auth_data?: string
   weight: number
   health_status?: 'healthy' | 'unhealthy' | 'unknown'
 }
@@ -330,8 +348,23 @@ const total = ref(0)
 // 弹窗状态
 const showModal = ref(false)
 const isEditing = ref(false)
+const isCopying = ref(false)
+const copySourceId = ref<number | null>(null)
 const editingId = ref<number | null>(null)
 const saving = ref(false)
+const originalAuthMethod = ref<'password' | 'private_key'>('password')
+
+const authDataRequired = computed(() => {
+  if (isCopying.value) return false
+  if (!isEditing.value) return true
+  return form.value.auth_method !== originalAuthMethod.value
+})
+
+const modalTitle = computed(() => {
+  if (isEditing.value) return '编辑 Host'
+  if (isCopying.value) return '复制 Host'
+  return '新建 Host'
+})
 
 // 删除弹窗状态
 const showDeleteModal = ref(false)
@@ -390,14 +423,18 @@ const changePage = (newPage: number) => {
 // 打开创建弹窗
 const openCreateModal = () => {
   isEditing.value = false
+  isCopying.value = false
+  copySourceId.value = null
   editingId.value = null
   form.value = { ...defaultForm }
   showModal.value = true
 }
 
-// 打开编辑弹窗
 const openEditModal = (host: Host) => {
   isEditing.value = true
+  isCopying.value = false
+  copySourceId.value = null
+  originalAuthMethod.value = host.auth_method
   editingId.value = host.id
   form.value = {
     name: host.name,
@@ -405,24 +442,70 @@ const openEditModal = (host: Host) => {
     port: host.port,
     username: host.username,
     auth_method: host.auth_method,
-    auth_data: '', // 编辑时不显示原有认证数据
+    auth_data: '',
     weight: host.weight
   }
   showModal.value = true
 }
 
-// 关闭弹窗
+const openCopyModal = (host: Host) => {
+  isEditing.value = false
+  isCopying.value = true
+  copySourceId.value = host.id
+  editingId.value = null
+  originalAuthMethod.value = host.auth_method
+  form.value = {
+    name: `${host.name}_copy`,
+    host: host.host,
+    port: host.port,
+    username: host.username,
+    auth_method: host.auth_method,
+    auth_data: '',
+    weight: host.weight
+  }
+  showModal.value = true
+}
+
 const closeModal = () => {
   showModal.value = false
+  isCopying.value = false
+  copySourceId.value = null
   form.value = { ...defaultForm }
 }
 
 // 保存主机
 const saveHost = async () => {
+  if (authDataRequired.value && !String(form.value.auth_data || '').trim()) {
+    showMessage('请填写密码或私钥', 'error')
+    return
+  }
   saving.value = true
   try {
-    if (isEditing.value && editingId.value) {
-      const res = await api.put(`/hosts/${editingId.value}`, form.value)
+    if (isCopying.value && copySourceId.value != null) {
+      const payload: Record<string, unknown> = {
+        name: form.value.name,
+        host: form.value.host,
+        port: form.value.port,
+        username: form.value.username,
+        weight: form.value.weight
+      }
+      if (String(form.value.auth_data || '').trim()) {
+        payload.auth_data = form.value.auth_data
+      }
+      const res = await api.post(`/hosts/${copySourceId.value}/copy`, payload)
+      if (res.data.code === 0) {
+        showMessage('复制并创建成功', 'success')
+        closeModal()
+        fetchHosts()
+      } else {
+        showMessage(res.data.message || '复制失败', 'error')
+      }
+    } else if (isEditing.value && editingId.value) {
+      const payload: Record<string, unknown> = { ...form.value }
+      if (!payload.auth_data) {
+        delete payload.auth_data
+      }
+      const res = await api.put(`/hosts/${editingId.value}`, payload)
       if (res.data.code === 0) {
         showMessage('更新成功', 'success')
         closeModal()

@@ -22,6 +22,7 @@ func NewRuleHandler(c *service.Container) *RuleHandler {
 }
 
 type CreateRuleRequest struct {
+	Name       string `json:"name" binding:"required"`
 	GroupID    uint64 `json:"group_id" binding:"required"`
 	LocalPort  int    `json:"local_port" binding:"required,min=1,max=65535"`
 	TargetHost string `json:"target_host" binding:"required"`
@@ -30,6 +31,7 @@ type CreateRuleRequest struct {
 }
 
 type UpdateRuleRequest struct {
+	Name       string `json:"name"`
 	GroupID    uint64 `json:"group_id"`
 	LocalPort  int    `json:"local_port"`
 	TargetHost string `json:"target_host"`
@@ -92,6 +94,7 @@ func (h *RuleHandler) Create(c *gin.Context) {
 	}
 
 	rule := &model.ForwardRule{
+		Name:       req.Name,
 		GroupID:    req.GroupID,
 		LocalPort:  req.LocalPort,
 		TargetHost: req.TargetHost,
@@ -211,6 +214,9 @@ func (h *RuleHandler) Update(c *gin.Context) {
 	}
 
 	// 更新其他字段
+	if req.Name != "" {
+		rule.Name = req.Name
+	}
 	if req.GroupID > 0 {
 		rule.GroupID = req.GroupID
 	}

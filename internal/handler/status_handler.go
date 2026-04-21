@@ -143,6 +143,7 @@ func (h *StatusHandler) Rules(c *gin.Context) {
 
 	type RuleStatus struct {
 		ID              uint64 `json:"id"`
+		Name            string `json:"name"`
 		GroupID         uint64 `json:"group_id"`
 		LocalPort       int    `json:"local_port"`
 		TargetHost      string `json:"target_host"`
@@ -179,6 +180,7 @@ func (h *StatusHandler) Rules(c *gin.Context) {
 
 		result = append(result, RuleStatus{
 			ID:              rule.ID,
+			Name:            rule.Name,
 			GroupID:         rule.GroupID,
 			LocalPort:       rule.LocalPort,
 			TargetHost:      rule.TargetHost,

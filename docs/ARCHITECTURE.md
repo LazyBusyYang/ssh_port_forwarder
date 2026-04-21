@@ -461,15 +461,18 @@ type ForwardGroup struct {
     DeletedAt gorm.DeletedAt
 }
 
-// model/forward_rule.go
+// model/forward_rule.go（节选；完整字段见仓库源码）
 type ForwardRule struct {
     ID           uint64     `gorm:"primaryKey;autoIncrement"`
     GroupID      uint64     `gorm:"index"`
-    LocalPort    int        `gorm:"not null;uniqueIndex"` // 监听端口，全局唯一，必须在允许范围内（默认 30000-33000，通过环境变量 SPF_PORT_RANGE_MIN / SPF_PORT_RANGE_MAX 配置）
-    TargetHost   string     `gorm:"size:255;not null"`     // 目标网络内主机 IP
+    Name         string     `gorm:"size:128;not null;default:''"` // 管理员可读名称，创建时必填
+    LocalPort    int        `gorm:"not null;uniqueIndex"` // 监听端口，全局唯一，范围见配置
+    TargetHost   string     `gorm:"size:255;not null"`
     TargetPort   int        `gorm:"not null"`
     Protocol     string     `gorm:"size:16;default:'tcp'"`
-    Status       string     `gorm:"size:16;default:'active'"`
+    Status       string     // active / inactive
+    ActiveHostID uint64     // 当前承载该规则的 SSH Host
+    // 关联 Preload：Group、ActiveHost
     CreatedAt    int64
     UpdatedAt    int64
     DeletedAt    gorm.DeletedAt
@@ -739,7 +742,10 @@ GET    /api/v1/hosts/:id         → Get host detail
 PUT    /api/v1/hosts/:id         → Update host
 DELETE /api/v1/hosts/:id         → Delete host (soft)
 POST   /api/v1/hosts/:id/test    → Test connection (SSH handshake)
+POST   /api/v1/hosts/:id/copy    → Copy host (reuse ciphertext server-side; optional new plaintext in body)
 ```
+
+列表/详情响应中的 Host **不包含** `auth_data` / `auth_nonce` 密文字段。
 
 #### 转发组管理
 
@@ -757,7 +763,7 @@ DELETE /api/v1/groups/:id/hosts/:host_id → Remove host from group
 
 ```
 GET    /api/v1/rules              → List all rules
-POST   /api/v1/rules              → Create rule
+POST   /api/v1/rules              → Create rule (body 需含 `name` 等字段)
 GET    /api/v1/rules/:id          → Get rule detail
 PUT    /api/v1/rules/:id          → Update rule
 DELETE /api/v1/rules/:id         → Delete rule

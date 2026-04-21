@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"ssh-port-forwarder/internal/config"
+	"ssh-port-forwarder/internal/model"
 	"ssh-port-forwarder/internal/repository"
 	"ssh-port-forwarder/internal/service/health"
 	"ssh-port-forwarder/internal/service/lb"
@@ -75,6 +76,21 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		return nil, fmt.Errorf("failed to auto migrate: %w", err)
 	}
 	log.Printf("[Container] Database auto migration completed")
+
+	// 3b. 旧库无 name 时补全为 rule_{local_port}（方言无关）
+	var unnamedRules []model.ForwardRule
+	if err := adapter.DB.Where("name = ''").Find(&unnamedRules).Error; err != nil {
+		return nil, fmt.Errorf("failed to list rules for name backfill: %w", err)
+	}
+	for _, r := range unnamedRules {
+		if err := adapter.DB.Model(&model.ForwardRule{}).Where("id = ?", r.ID).
+			Update("name", fmt.Sprintf("rule_%d", r.LocalPort)).Error; err != nil {
+			return nil, fmt.Errorf("failed to backfill rule name id=%d: %w", r.ID, err)
+		}
+	}
+	if len(unnamedRules) > 0 {
+		log.Printf("[Container] Forward rule names backfilled (%d records)", len(unnamedRules))
+	}
 
 	// 4. 创建所有 Repository 实例
 	userRepo := repository.NewUserRepository(adapter.DB)

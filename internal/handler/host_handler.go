@@ -43,6 +43,52 @@ type UpdateHostRequest struct {
 	Weight     int    `json:"weight"`
 }
 
+// HostResponse 返回给前端的 Host，不含认证密文。
+type HostResponse struct {
+	ID            uint64  `json:"id"`
+	Name          string  `json:"name"`
+	Host          string  `json:"host"`
+	Port          int     `json:"port"`
+	Username      string  `json:"username"`
+	AuthMethod    string  `json:"auth_method"`
+	Weight        int     `json:"weight"`
+	HealthStatus  string  `json:"health_status"`
+	HealthScore   float64 `json:"health_score"`
+	LastCheckAt   int64   `json:"last_check_at"`
+	LastSuccessAt int64   `json:"last_success_at"`
+	CreatedAt     int64   `json:"created_at"`
+	UpdatedAt     int64   `json:"updated_at"`
+}
+
+func toHostResponse(h *model.SSHHost) HostResponse {
+	if h == nil {
+		return HostResponse{}
+	}
+	return HostResponse{
+		ID:            h.ID,
+		Name:          h.Name,
+		Host:          h.Host,
+		Port:          h.Port,
+		Username:      h.Username,
+		AuthMethod:    h.AuthMethod,
+		Weight:        h.Weight,
+		HealthStatus:  h.HealthStatus,
+		HealthScore:   h.HealthScore,
+		LastCheckAt:   h.LastCheckAt,
+		LastSuccessAt: h.LastSuccessAt,
+		CreatedAt:     h.CreatedAt,
+		UpdatedAt:     h.UpdatedAt,
+	}
+}
+
+func toHostResponses(hosts []model.SSHHost) []HostResponse {
+	out := make([]HostResponse, len(hosts))
+	for i := range hosts {
+		out[i] = toHostResponse(&hosts[i])
+	}
+	return out
+}
+
 // List 分页查询 SSH Host 列表
 func (h *HostHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -60,7 +106,7 @@ func (h *HostHandler) List(c *gin.Context) {
 		return
 	}
 
-	response.Paged(c, hosts, total, page, pageSize)
+	response.Paged(c, toHostResponses(hosts), total, page, pageSize)
 }
 
 // Create 创建 SSH Host
@@ -106,7 +152,91 @@ func (h *HostHandler) Create(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, host)
+	response.Success(c, toHostResponse(host))
+}
+
+// CopyHostRequest 从已有 Host 复制；name 必填，其余可覆盖。不传 auth_data 时在库内复制源记录的密文，永不下发前端。
+type CopyHostRequest struct {
+	Name       string `json:"name" binding:"required"`
+	Host       string `json:"host"`
+	Port       int    `json:"port"`
+	Username   string `json:"username"`
+	Weight     int    `json:"weight"`
+	AuthData   string `json:"auth_data"`
+}
+
+// Copy 基于源 Host 创建副本，默认在服务端复制 AuthData/AuthNonce/AuthMethod；仅当请求中提供 auth_data 时用新明文加密写入。
+func (h *HostHandler) Copy(c *gin.Context) {
+	sourceID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, 400, "invalid id")
+		return
+	}
+
+	var req CopyHostRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, 400, "invalid request: "+err.Error())
+		return
+	}
+
+	src, err := h.container.HostRepo.FindByID(sourceID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, 500, "failed to get source host: "+err.Error())
+		return
+	}
+	if src == nil {
+		response.Error(c, http.StatusNotFound, 404, "source host not found")
+		return
+	}
+
+	host := &model.SSHHost{
+		Name:          req.Name,
+		Host:          src.Host,
+		Port:          src.Port,
+		Username:      src.Username,
+		AuthMethod:    src.AuthMethod,
+		AuthData:      src.AuthData,
+		AuthNonce:     src.AuthNonce,
+		Weight:        src.Weight,
+		HealthStatus:  "unknown",
+		HealthScore:   0,
+		LastCheckAt:   0,
+		LastSuccessAt: 0,
+	}
+
+	if req.Host != "" {
+		host.Host = req.Host
+	}
+	if req.Port >= 1 && req.Port <= 65535 {
+		host.Port = req.Port
+	}
+	if req.Username != "" {
+		host.Username = req.Username
+	}
+	if req.Weight >= 1 && req.Weight <= 100 {
+		host.Weight = req.Weight
+	}
+
+	if req.AuthData != "" {
+		if err := validator.ValidateAuthMethod(host.AuthMethod); err != nil {
+			response.Error(c, http.StatusBadRequest, 400, err.Error())
+			return
+		}
+		encryptedData, nonce, err := crypto.Encrypt(req.AuthData, h.container.Config.Encryption.Key)
+		if err != nil {
+			response.Error(c, http.StatusInternalServerError, 500, "failed to encrypt auth data: "+err.Error())
+			return
+		}
+		host.AuthData = encryptedData
+		host.AuthNonce = nonce
+	}
+
+	if err := h.container.HostRepo.Create(host); err != nil {
+		response.Error(c, http.StatusInternalServerError, 500, "failed to copy host: "+err.Error())
+		return
+	}
+
+	response.Success(c, toHostResponse(host))
 }
 
 // Get 获取单个 SSH Host
@@ -127,7 +257,7 @@ func (h *HostHandler) Get(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, host)
+	response.Success(c, toHostResponse(host))
 }
 
 // Update 更新 SSH Host
@@ -192,7 +322,7 @@ func (h *HostHandler) Update(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, host)
+	response.Success(c, toHostResponse(host))
 }
 
 // Delete 删除 SSH Host（软删除）
