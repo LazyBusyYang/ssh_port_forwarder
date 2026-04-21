@@ -2,6 +2,7 @@ package health
 
 import (
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -267,8 +268,51 @@ func (c *Checker) checkRuleHealth(rule *model.ForwardRule, sshClient *ssh.Client
 		}
 	}
 
-	e2eResult := EndToEndDetectViaLocal(rule.LocalPort, 3*time.Second)
-	if e2eResult.Success {
+	proto := strings.ToLower(strings.TrimSpace(rule.Protocol))
+
+	// 对 HTTP 服务使用合法 GET，避免写入裸字节导致 Uvicorn 等报 Invalid HTTP request。
+	if proto == "http" {
+		httpResult := EndToEndHTTPViaLocal(rule.LocalPort, 3*time.Second)
+		if httpResult.Success {
+			return RuleHealthResult{
+				RuleID:         rule.ID,
+				LocalPort:      rule.LocalPort,
+				Healthy:        true,
+				LocalReachable: true,
+				EndToEndOK:     true,
+				FallbackUsed:   false,
+				Reason:         "",
+				CheckedAt:      checkedAt,
+			}
+		}
+		tunnelResult := TunnelDetect(sshClient, rule.TargetHost, rule.TargetPort, 3*time.Second)
+		if tunnelResult.Success {
+			return RuleHealthResult{
+				RuleID:         rule.ID,
+				LocalPort:      rule.LocalPort,
+				Healthy:        true,
+				LocalReachable: true,
+				EndToEndOK:     true,
+				FallbackUsed:   true,
+				Reason:         "http probe via local failed; tunnel fallback passed",
+				CheckedAt:      checkedAt,
+			}
+		}
+		return RuleHealthResult{
+			RuleID:         rule.ID,
+			LocalPort:      rule.LocalPort,
+			Healthy:        false,
+			LocalReachable: true,
+			EndToEndOK:     false,
+			FallbackUsed:   true,
+			Reason:         "http probe and tunnel fallback both failed",
+			CheckedAt:      checkedAt,
+		}
+	}
+
+	// tcp / https / 默认：不在本地端口写入应用层数据，仅用 SSH 隧道探测目标，避免污染 HTTP 等协议。
+	tunnelResult := TunnelDetect(sshClient, rule.TargetHost, rule.TargetPort, 3*time.Second)
+	if tunnelResult.Success {
 		return RuleHealthResult{
 			RuleID:         rule.ID,
 			LocalPort:      rule.LocalPort,
@@ -281,28 +325,14 @@ func (c *Checker) checkRuleHealth(rule *model.ForwardRule, sshClient *ssh.Client
 		}
 	}
 
-	tunnelResult := TunnelDetect(sshClient, rule.TargetHost, rule.TargetPort, 3*time.Second)
-	if tunnelResult.Success {
-		return RuleHealthResult{
-			RuleID:         rule.ID,
-			LocalPort:      rule.LocalPort,
-			Healthy:        true,
-			LocalReachable: true,
-			EndToEndOK:     true,
-			FallbackUsed:   true,
-			Reason:         "end-to-end-via-local failed; tunnel fallback passed",
-			CheckedAt:      checkedAt,
-		}
-	}
-
 	return RuleHealthResult{
 		RuleID:         rule.ID,
 		LocalPort:      rule.LocalPort,
 		Healthy:        false,
 		LocalReachable: true,
 		EndToEndOK:     false,
-		FallbackUsed:   true,
-		Reason:         "end-to-end-via-local and tunnel fallback both failed",
+		FallbackUsed:   false,
+		Reason:         "tunnel unreachable",
 		CheckedAt:      checkedAt,
 	}
 }
