@@ -5,29 +5,43 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/crypto/ssh"
 	"ssh-port-forwarder/internal/model"
 	"ssh-port-forwarder/internal/repository"
 	"ssh-port-forwarder/internal/service/ssh_manager"
 )
 
 type Checker struct {
-	mu           sync.RWMutex
-	hostRepo     repository.SSHHostRepository
-	healthRepo   repository.HealthHistoryRepository
-	ruleRepo     repository.ForwardRuleRepository
-	sshManager   *ssh_manager.Manager
-	eventCh      chan HealthEvent // 状态变更事件通道
-	stopCh       chan struct{}
+	mu         sync.RWMutex
+	hostRepo   repository.SSHHostRepository
+	healthRepo repository.HealthHistoryRepository
+	ruleRepo   repository.ForwardRuleRepository
+	sshManager *ssh_manager.Manager
+	eventCh    chan HealthEvent // 状态变更事件通道
+	stopCh     chan struct{}
 	// 滑动窗口：hostID -> []CheckResult（最近 5 分钟）
 	checkWindows map[uint64][]windowEntry
+	// 最近一次 Rule 健康探测结果：ruleID -> result
+	ruleHealth map[uint64]RuleHealthResult
 	// WebSocket 订阅者管理
-	wsSubsMu     sync.RWMutex
-	wsSubs       map[chan HealthEvent]struct{}
+	wsSubsMu sync.RWMutex
+	wsSubs   map[chan HealthEvent]struct{}
 }
 
 type windowEntry struct {
 	result    CheckResult
 	timestamp time.Time
+}
+
+type RuleHealthResult struct {
+	RuleID         uint64 `json:"rule_id"`
+	LocalPort      int    `json:"local_port"`
+	Healthy        bool   `json:"healthy"`
+	LocalReachable bool   `json:"local_reachable"`
+	EndToEndOK     bool   `json:"end_to_end_ok"`
+	FallbackUsed   bool   `json:"fallback_used"`
+	Reason         string `json:"reason,omitempty"`
+	CheckedAt      int64  `json:"checked_at"`
 }
 
 // NewChecker 创建新的 Checker 实例
@@ -45,8 +59,20 @@ func NewChecker(
 		eventCh:      make(chan HealthEvent, 100),
 		stopCh:       make(chan struct{}),
 		checkWindows: make(map[uint64][]windowEntry),
+		ruleHealth:   make(map[uint64]RuleHealthResult),
 		wsSubs:       make(map[chan HealthEvent]struct{}),
 	}
+}
+
+func (c *Checker) GetRuleHealthSnapshot() map[uint64]RuleHealthResult {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	result := make(map[uint64]RuleHealthResult, len(c.ruleHealth))
+	for k, v := range c.ruleHealth {
+		result[k] = v
+	}
+	return result
 }
 
 // SubscribeWS 为 WebSocket 客户端创建独立通道
@@ -119,13 +145,9 @@ func (c *Checker) RunCheck() {
 // checkHost 检查单个 Host 的健康状态
 func (c *Checker) checkHost(host *model.SSHHost) {
 	checkedAt := time.Now().Unix()
-	var tcpResult, sshResult CheckResult
-	var tunnelResults []CheckResult
+	var sshResult CheckResult
 
-	// 1. TCP 检测
-	tcpResult = TCPDetect(host.Host, host.Port, 5*time.Second)
-
-	// 2. SSH 检测（如果 SSH Manager 中有对应 Client 且已连接）
+	// Host 健康标准：SSH 连接可用（并辅以 SSH keepalive 检测）
 	sshClient := c.sshManager.GetClient(host.ID)
 	if sshClient != nil && sshClient.IsConnected() {
 		sshResult = SSHDetect(host.Host, host.Port, sshClient.GetClient())
@@ -133,55 +155,56 @@ func (c *Checker) checkHost(host *model.SSHHost) {
 		sshResult = CheckResult{Success: false, LatencyMs: 0}
 	}
 
-	// 3. Tunnel 检测（获取该 Host 上所有活跃 Rule）
+	// Rule 健康标准：本地端口可达 + 端到端探测（失败时 TunnelDetect 兜底）
 	if sshClient != nil && sshClient.IsConnected() {
-		// 获取所有转发组，然后获取每个组中的规则
-		// 这里简化处理：通过 ruleRepo 查找所有活跃规则
 		rules, err := c.ruleRepo.ListActive()
 		if err != nil {
 			log.Printf("[HealthChecker] Failed to list active rules: %v", err)
 		} else {
 			for _, rule := range rules {
-				// 只检查当前 Host 承载的规则
 				if rule.ActiveHostID == host.ID {
-					result := TunnelDetect(sshClient.GetClient(), rule.TargetHost, rule.TargetPort, 5*time.Second)
-					tunnelResults = append(tunnelResults, result)
+					ruleHealth := c.checkRuleHealth(&rule, sshClient.GetClient(), checkedAt)
+					c.mu.Lock()
+					c.ruleHealth[rule.ID] = ruleHealth
+					c.mu.Unlock()
+
+					log.Printf("[HealthChecker] Rule %d local=%t e2e=%t fallback=%t healthy=%t reason=%s",
+						rule.ID,
+						ruleHealth.LocalReachable,
+						ruleHealth.EndToEndOK,
+						ruleHealth.FallbackUsed,
+						ruleHealth.Healthy,
+						ruleHealth.Reason)
+				}
+			}
+		}
+	} else {
+		// Host 未连接时，标记该 Host 下所有 active rule 为不健康，便于状态接口直观看到
+		rules, err := c.ruleRepo.ListActive()
+		if err == nil {
+			for _, rule := range rules {
+				if rule.ActiveHostID == host.ID {
+					c.mu.Lock()
+					c.ruleHealth[rule.ID] = RuleHealthResult{
+						RuleID:         rule.ID,
+						LocalPort:      rule.LocalPort,
+						Healthy:        false,
+						LocalReachable: false,
+						EndToEndOK:     false,
+						FallbackUsed:   false,
+						Reason:         "ssh client not connected",
+						CheckedAt:      checkedAt,
+					}
+					c.mu.Unlock()
 				}
 			}
 		}
 	}
 
-	// 计算平均延迟
-	var totalLatency float64
-	var checkCount int
-	if tcpResult.Success {
-		totalLatency += tcpResult.LatencyMs
-		checkCount++
-	}
-	if sshResult.Success {
-		totalLatency += sshResult.LatencyMs
-		checkCount++
-	}
-	for _, r := range tunnelResults {
-		if r.Success {
-			totalLatency += r.LatencyMs
-			checkCount++
-		}
-	}
-
-	var avgLatency float64
-	if checkCount > 0 {
-		avgLatency = totalLatency / float64(checkCount)
-	}
-
-	// 更新滑动窗口
+	// Host 健康仅由 SSH 可用性决定
 	c.mu.Lock()
-	// 综合检测结果：TCP 检测成功即可认为 Host 健康
-	// SSH 连接和 Tunnel 检测用于转发功能，不影响 Host 健康状态
-	overallSuccess := tcpResult.Success
-
 	c.checkWindows[host.ID] = append(c.checkWindows[host.ID], windowEntry{
-		result:    CheckResult{Success: overallSuccess, LatencyMs: avgLatency},
+		result:    sshResult,
 		timestamp: time.Now(),
 	})
 	c.mu.Unlock()
@@ -198,14 +221,14 @@ func (c *Checker) checkHost(host *model.SSHHost) {
 	}
 
 	// 如果检测成功，更新最后成功时间
-	if overallSuccess {
+	if sshResult.Success {
 		if err := c.hostRepo.UpdateLastSuccess(host.ID, checkedAt); err != nil {
 			log.Printf("[HealthChecker] Failed to update last success for host %d: %v", host.ID, err)
 		}
 	}
 
 	// 记录历史
-	c.RecordHistory(host.ID, score, status == "healthy", avgLatency)
+	c.RecordHistory(host.ID, score, status == "healthy", sshResult.LatencyMs)
 
 	// 如果状态有变化，发送事件
 	if statusChanged {
@@ -213,7 +236,7 @@ func (c *Checker) checkHost(host *model.SSHHost) {
 			HostID:       host.ID,
 			HealthStatus: status,
 			HealthScore:  score,
-			LatencyMs:    avgLatency,
+			LatencyMs:    sshResult.LatencyMs,
 			CheckedAt:    checkedAt,
 		}
 		select {
@@ -226,7 +249,62 @@ func (c *Checker) checkHost(host *model.SSHHost) {
 	}
 
 	log.Printf("[HealthChecker] Host %d (%s@%s:%d) status=%s score=%.2f latency=%.2fms",
-		host.ID, host.Username, host.Host, host.Port, status, score, avgLatency)
+		host.ID, host.Username, host.Host, host.Port, status, score, sshResult.LatencyMs)
+}
+
+func (c *Checker) checkRuleHealth(rule *model.ForwardRule, sshClient *ssh.Client, checkedAt int64) RuleHealthResult {
+	localResult := LocalForwardDetect(rule.LocalPort, 3*time.Second)
+	if !localResult.Success {
+		return RuleHealthResult{
+			RuleID:         rule.ID,
+			LocalPort:      rule.LocalPort,
+			Healthy:        false,
+			LocalReachable: false,
+			EndToEndOK:     false,
+			FallbackUsed:   false,
+			Reason:         "local listener unreachable",
+			CheckedAt:      checkedAt,
+		}
+	}
+
+	e2eResult := EndToEndDetectViaLocal(rule.LocalPort, 3*time.Second)
+	if e2eResult.Success {
+		return RuleHealthResult{
+			RuleID:         rule.ID,
+			LocalPort:      rule.LocalPort,
+			Healthy:        true,
+			LocalReachable: true,
+			EndToEndOK:     true,
+			FallbackUsed:   false,
+			Reason:         "",
+			CheckedAt:      checkedAt,
+		}
+	}
+
+	tunnelResult := TunnelDetect(sshClient, rule.TargetHost, rule.TargetPort, 3*time.Second)
+	if tunnelResult.Success {
+		return RuleHealthResult{
+			RuleID:         rule.ID,
+			LocalPort:      rule.LocalPort,
+			Healthy:        true,
+			LocalReachable: true,
+			EndToEndOK:     true,
+			FallbackUsed:   true,
+			Reason:         "end-to-end-via-local failed; tunnel fallback passed",
+			CheckedAt:      checkedAt,
+		}
+	}
+
+	return RuleHealthResult{
+		RuleID:         rule.ID,
+		LocalPort:      rule.LocalPort,
+		Healthy:        false,
+		LocalReachable: true,
+		EndToEndOK:     false,
+		FallbackUsed:   true,
+		Reason:         "end-to-end-via-local and tunnel fallback both failed",
+		CheckedAt:      checkedAt,
+	}
 }
 
 // calculateHealth 计算健康度

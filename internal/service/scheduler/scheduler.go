@@ -174,8 +174,8 @@ func (s *Scheduler) runMetricsFlush() {
 		// 记录历史（使用 healthChecker.RecordHistory 方法）
 		s.healthChecker.RecordHistory(hostID, score, isHealthy, 0)
 
-		log.Printf("[Scheduler] Metrics flushed for host %d: state=%s, score=%.2f",
-			hostID, state.String(), score)
+		log.Printf("[Scheduler] Metrics flushed for host %d: state=%s connected=%t score=%.2f",
+			hostID, state.String(), isConnected, score)
 	}
 }
 
