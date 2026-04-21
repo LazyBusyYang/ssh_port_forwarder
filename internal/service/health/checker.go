@@ -150,6 +150,14 @@ func (c *Checker) checkHost(host *model.SSHHost) {
 
 	// Host 健康标准：SSH 连接可用（并辅以 SSH keepalive 检测）
 	sshClient := c.sshManager.GetClient(host.ID)
+	if sshClient == nil || !sshClient.IsConnected() {
+		// 对未建立连接或断开的 Host，健康检查主动尝试建立 SSH 连接，
+		// 避免“手动可连但系统一直显示 unhealthy”的状态错位。
+		if err := c.sshManager.ConnectHost(host); err != nil {
+			log.Printf("[HealthChecker] ConnectHost failed for host %d: %v", host.ID, err)
+		}
+		sshClient = c.sshManager.GetClient(host.ID)
+	}
 	if sshClient != nil && sshClient.IsConnected() {
 		sshResult = SSHDetect(host.Host, host.Port, sshClient.GetClient())
 	} else {
