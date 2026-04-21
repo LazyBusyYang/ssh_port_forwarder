@@ -92,6 +92,12 @@
                 编辑
               </button>
               <button
+                @click="openCopyModal(group)"
+                class="text-violet-600 hover:text-violet-800 text-sm"
+              >
+                复制
+              </button>
+              <button
                 @click="confirmDelete(group)"
                 class="text-red-600 hover:text-red-800 text-sm"
               >
@@ -132,7 +138,7 @@
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-900">{{ isEditing ? '编辑转发组' : '创建转发组' }}</h3>
+          <h3 class="text-lg font-semibold text-gray-900">{{ modalTitle }}</h3>
           <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -160,6 +166,9 @@
               <option value="weighted">加权 (Weighted)</option>
             </select>
           </div>
+          <p v-if="isCopying && copyingHosts.length > 0" class="text-sm text-gray-600">
+            将同时复制 {{ copyingHosts.length }} 个关联主机
+          </p>
         </div>
         <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
           <button
@@ -323,7 +332,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '../api'
 
 interface Host {
@@ -357,9 +366,17 @@ const total = ref(0)
 
 const showModal = ref(false)
 const isEditing = ref(false)
+const isCopying = ref(false)
 const saving = ref(false)
 const form = ref({ name: '', strategy: 'round_robin' })
 const editingGroupId = ref<number | null>(null)
+const copyingHosts = ref<Host[]>([])
+
+const modalTitle = computed(() => {
+  if (isEditing.value) return '编辑转发组'
+  if (isCopying.value) return '复制转发组'
+  return '创建转发组'
+})
 
 const showDeleteModal = ref(false)
 const deleting = ref(false)
@@ -423,6 +440,8 @@ const nextPage = () => {
 
 const openCreateModal = () => {
   isEditing.value = false
+  isCopying.value = false
+  copyingHosts.value = []
   form.value = { name: '', strategy: 'round_robin' }
   editingGroupId.value = null
   showModal.value = true
@@ -430,13 +449,34 @@ const openCreateModal = () => {
 
 const openEditModal = (group: Group) => {
   isEditing.value = true
+  isCopying.value = false
+  copyingHosts.value = []
   form.value = { name: group.name, strategy: group.strategy }
   editingGroupId.value = group.id
   showModal.value = true
 }
 
+const openCopyModal = async (group: Group) => {
+  error.value = ''
+  try {
+    const response = await api.get(`/groups/${group.id}`)
+    const detail = response.data.data as Group
+    copyingHosts.value = detail.hosts || []
+  } catch (err: any) {
+    error.value = err.response?.data?.message || '获取转发组详情失败'
+    return
+  }
+  isEditing.value = false
+  isCopying.value = true
+  editingGroupId.value = null
+  form.value = { name: `${group.name}_copy`, strategy: group.strategy }
+  showModal.value = true
+}
+
 const closeModal = () => {
   showModal.value = false
+  isCopying.value = false
+  copyingHosts.value = []
 }
 
 const saveGroup = async () => {
@@ -446,11 +486,18 @@ const saveGroup = async () => {
   }
 
   saving.value = true
+  error.value = ''
   try {
     if (isEditing.value && editingGroupId.value) {
       await api.put(`/groups/${editingGroupId.value}`, form.value)
     } else {
-      await api.post('/groups', form.value)
+      const res = await api.post('/groups', form.value)
+      const newId = res.data.data?.id as number | undefined
+      if (isCopying.value && newId && copyingHosts.value.length > 0) {
+        for (const host of copyingHosts.value) {
+          await api.post(`/groups/${newId}/hosts`, { host_id: host.id })
+        }
+      }
     }
     closeModal()
     fetchGroups()

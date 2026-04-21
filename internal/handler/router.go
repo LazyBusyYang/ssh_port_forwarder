@@ -52,6 +52,7 @@ func SetupRouter(container *service.Container) *gin.Engine {
 		{
 			hosts.GET("", hostHandler.List)
 			hosts.POST("", hostHandler.Create)
+			hosts.POST("/:id/copy", hostHandler.Copy)
 			hosts.GET("/:id", hostHandler.Get)
 			hosts.PUT("/:id", hostHandler.Update)
 			hosts.DELETE("/:id", hostHandler.Delete)

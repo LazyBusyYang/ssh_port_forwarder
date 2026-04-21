@@ -50,6 +50,7 @@
         <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Local Port</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Protocol</th>
@@ -61,6 +62,9 @@
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
           <tr v-for="rule in rules" :key="rule.id" class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+              {{ rule.name || '-' }}
+            </td>
             <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
               {{ rule.local_port }}
             </td>
@@ -96,6 +100,12 @@
                 class="text-indigo-600 hover:text-indigo-800 text-sm"
               >
                 编辑
+              </button>
+              <button
+                @click="openCopyModal(rule)"
+                class="text-violet-600 hover:text-violet-800 text-sm"
+              >
+                复制
               </button>
               <button
                 @click="confirmDelete(rule)"
@@ -138,7 +148,7 @@
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-900">{{ isEditing ? '编辑转发规则' : '创建转发规则' }}</h3>
+          <h3 class="text-lg font-semibold text-gray-900">{{ modalTitle }}</h3>
           <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -146,6 +156,21 @@
           </button>
         </div>
         <div class="px-6 py-4 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              名称 <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="form.name"
+              type="text"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="输入规则名称，便于识别"
+            />
+            <p v-if="duplicateNameWarning" class="text-xs text-amber-600 mt-1">
+              已存在同名规则，保存时将再次提示确认
+            </p>
+          </div>
           <!-- Group 选择 -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">转发组</label>
@@ -171,11 +196,14 @@
               v-model.number="form.local_port"
               type="number"
               :disabled="isEditing"
-              min="30000"
+              :min="isCopying ? 0 : 30000"
               max="33000"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               placeholder="30000"
             />
+            <p v-if="isCopying" class="text-xs text-red-500 mt-1 font-medium">
+              端口全局唯一，必须指定新值
+            </p>
           </div>
 
           <!-- Target Host -->
@@ -244,7 +272,9 @@
             <h3 class="text-lg font-semibold text-gray-900">确认删除</h3>
           </div>
           <p class="text-gray-600">
-            确定要删除转发规则 <strong>{{ ruleToDelete?.local_port }} → {{ ruleToDelete?.target_host }}:{{ ruleToDelete?.target_port }}</strong> 吗？此操作不可恢复。
+            确定要删除转发规则
+            <strong>{{ ruleToDelete?.name || ruleToDelete?.local_port }}</strong>
+            （{{ ruleToDelete?.local_port }} → {{ ruleToDelete?.target_host }}:{{ ruleToDelete?.target_port }}）吗？此操作不可恢复。
           </p>
         </div>
         <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
@@ -281,7 +311,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '../api'
 
 interface Group {
@@ -296,6 +326,7 @@ interface Host {
 
 interface Rule {
   id: number
+  name: string
   group_id: number
   local_port: number
   target_host: string
@@ -316,14 +347,31 @@ const total = ref(0)
 
 const showModal = ref(false)
 const isEditing = ref(false)
+const isCopying = ref(false)
 const saving = ref(false)
+
+const modalTitle = computed(() => {
+  if (isEditing.value) return '编辑转发规则'
+  if (isCopying.value) return '复制转发规则'
+  return '创建转发规则'
+})
+
+const duplicateNameWarning = computed(() => {
+  const name = form.value.name.trim()
+  if (!name) return false
+  return rules.value.some(
+    (r) => r.name === name && r.id !== (editingRuleId.value ?? 0)
+  )
+})
 const form = ref<{
+  name: string
   group_id: number | string
   local_port: number
   target_host: string
   target_port: number
   protocol: string
 }>({
+  name: '',
   group_id: '',
   local_port: 30000,
   target_host: '',
@@ -396,7 +444,9 @@ const nextPage = () => {
 
 const openCreateModal = () => {
   isEditing.value = false
+  isCopying.value = false
   form.value = {
+    name: '',
     group_id: 0,
     local_port: 30000,
     target_host: '',
@@ -410,7 +460,9 @@ const openCreateModal = () => {
 
 const openEditModal = (rule: Rule) => {
   isEditing.value = true
+  isCopying.value = false
   form.value = {
+    name: rule.name || '',
     group_id: rule.group_id,
     local_port: rule.local_port,
     target_host: rule.target_host,
@@ -422,13 +474,38 @@ const openEditModal = (rule: Rule) => {
   showModal.value = true
 }
 
+const openCopyModal = (rule: Rule) => {
+  isEditing.value = false
+  isCopying.value = true
+  editingRuleId.value = null
+  form.value = {
+    name: rule.name ? `${rule.name}_copy` : '',
+    group_id: rule.group_id,
+    local_port: 0,
+    target_host: rule.target_host,
+    target_port: rule.target_port,
+    protocol: rule.protocol
+  }
+  fetchGroups()
+  showModal.value = true
+}
+
 const closeModal = () => {
   showModal.value = false
+  isCopying.value = false
 }
 
 const validateForm = () => {
+  if (!form.value.name.trim()) {
+    error.value = '请输入规则名称'
+    return false
+  }
   if (!form.value.group_id) {
     error.value = '请选择转发组'
+    return false
+  }
+  if (isCopying.value && (!form.value.local_port || form.value.local_port === 0)) {
+    error.value = '复制规则时必须为本地端口指定新值（30000-33000）'
     return false
   }
   if (!form.value.local_port || form.value.local_port < 30000 || form.value.local_port > 33000) {
@@ -449,11 +526,17 @@ const validateForm = () => {
 const saveRule = async () => {
   if (!validateForm()) return
 
+  if (duplicateNameWarning.value) {
+    const ok = window.confirm('已存在同名规则，确定要继续保存吗？')
+    if (!ok) return
+  }
+
   saving.value = true
   try {
     const payload = {
       ...form.value,
-      group_id: parseInt(form.value.group_id as string)
+      name: form.value.name.trim(),
+      group_id: parseInt(String(form.value.group_id), 10)
     }
     if (isEditing.value && editingRuleId.value) {
       await api.put(`/rules/${editingRuleId.value}`, payload)
