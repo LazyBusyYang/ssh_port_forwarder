@@ -442,23 +442,30 @@ kubectl apply -f deployment.yaml
 
 ## 监控指标
 
-服务暴露以下 Prometheus 指标：
+`/metrics` 在默认注册表上同时暴露 **Go 运行时**（`go_*`）、**进程**（`process_*`）、**Prometheus handler**（`promhttp_*`）以及下列 **业务指标**（定义见 `internal/pkg/metrics/metrics.go`）。部分带标签的指标在首次写入前可能暂无样本行，属正常现象。
+
+**业务指标一览：**
+
+| 指标名 | 类型 | 说明 |
+|--------|------|------|
+| `spf_host_health` | Gauge | Host 是否健康（1=healthy，0=unhealthy），标签 `host_id`、`host_name` |
+| `spf_host_latency_seconds` | Histogram | SSH keepalive 往返延迟（秒），仅探测成功时记录，标签 `host_id`、`host_name` |
+| `spf_host_rule_load` | Gauge | 当前分配在该 Host 上的 active 规则数，标签 `host_id`、`host_name` |
+| `spf_rule_health` | Gauge | 规则是否健康（1/0），标签 `rule_id`、`rule_name`、`group_id` |
+| `spf_rule_host_switch_total` | Counter | 规则因 LB 发生 active host 切换的累计次数，标签 `rule_id`、`rule_name`、`from_host_id`、`to_host_id` |
+| `spf_host_group_info` | Gauge | Host 与 Group 的归属关系（值恒为 1），在 API 将 Host 加入/移出组时维护；供 Grafana 与 `host_id` 做 label join，标签 `host_id`、`host_name`、`group_id`、`group_name` |
+
+示例（经 Prometheus 文本格式截断，直方图含 `_bucket` / `_sum` / `_count`）：
 
 ```
-# SSH Host 健康状态
-ssh_host_health{host="10.0.0.101"} 1
+# Host 健康
+spf_host_health{host_id="1",host_name="node-a"} 1
 
-# 活跃 SSH 连接数
-ssh_connection_active 5
+# 规则健康
+spf_rule_health{group_id="1",rule_id="1",rule_name="rule_30000"} 1
 
-# 端口转发在线状态
-forward_active{local_port="12001", target="10.0.0.101:3306"} 1
-
-# 健康检查延迟
-ssh_healthcheck_latency_seconds{host="10.0.0.101"} 0.023
-
-# LB 故障切换次数
-lb_failover_total{from_host="10.0.0.101", to_host="10.0.0.102"} 3
+# Host-Group 映射（用于按组聚合 host 类指标）
+spf_host_group_info{group_id="1",group_name="default",host_id="1",host_name="node-a"} 1
 ```
 
 ## 安全注意事项

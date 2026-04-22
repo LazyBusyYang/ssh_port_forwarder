@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"ssh-port-forwarder/internal/model"
+	"ssh-port-forwarder/internal/pkg/metrics"
 	"ssh-port-forwarder/internal/pkg/response"
 	"ssh-port-forwarder/internal/pkg/validator"
 	"ssh-port-forwarder/internal/service"
@@ -209,6 +210,13 @@ func (h *GroupHandler) AddHost(c *gin.Context) {
 		return
 	}
 
+	metrics.SPFHostGroupInfo.WithLabelValues(
+		strconv.FormatUint(req.HostID, 10),
+		host.Name,
+		strconv.FormatUint(groupID, 10),
+		group.Name,
+	).Set(1)
+
 	response.Success(c, gin.H{"message": "host added to group"})
 }
 
@@ -226,10 +234,36 @@ func (h *GroupHandler) RemoveHost(c *gin.Context) {
 		return
 	}
 
+	group, err := h.container.GroupRepo.FindByID(groupID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, 500, "failed to get group: "+err.Error())
+		return
+	}
+	if group == nil {
+		response.Error(c, http.StatusNotFound, 404, "group not found")
+		return
+	}
+	host, err := h.container.HostRepo.FindByID(hostID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, 500, "failed to get host: "+err.Error())
+		return
+	}
+	if host == nil {
+		response.Error(c, http.StatusNotFound, 404, "host not found")
+		return
+	}
+
 	if err := h.container.GroupRepo.RemoveHost(groupID, hostID); err != nil {
 		response.Error(c, http.StatusInternalServerError, 500, "failed to remove host: "+err.Error())
 		return
 	}
+
+	metrics.SPFHostGroupInfo.DeleteLabelValues(
+		strconv.FormatUint(hostID, 10),
+		host.Name,
+		strconv.FormatUint(groupID, 10),
+		group.Name,
+	)
 
 	response.Success(c, gin.H{"message": "host removed from group"})
 }

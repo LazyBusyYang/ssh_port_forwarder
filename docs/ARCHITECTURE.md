@@ -364,29 +364,21 @@ SSH Manager 建立新 Tunnel，切换转发
 
 ### 3.7 Prometheus 指标接口
 
-**指标定义**：
+`GET /metrics` 由 `promhttp.Handler` 提供，除 Go/进程/抓取器相关默认指标外，业务指标在 `internal/pkg/metrics/metrics.go` 中注册，命名空间为 `spf_`：
+
+| 指标 | 类型 | 标签 | 说明 |
+|------|------|------|------|
+| `spf_host_health` | Gauge | `host_id`, `host_name` | 1/0 表示健康检查判定是否 healthy |
+| `spf_host_latency_seconds` | Histogram | `host_id`, `host_name` | SSH keepalive 往返时延（秒），仅成功时 Observe |
+| `spf_host_rule_load` | Gauge | `host_id`, `host_name` | 当前 `active` 且 `active_host` 指向该主机的规则数；在分配、failover、规则创建/删除/重启等路径刷新 |
+| `spf_rule_health` | Gauge | `rule_id`, `rule_name`, `group_id` | 与健康检查中 rule 端探测结果一致，检查周期与 Scheduler 中健康任务一致 |
+| `spf_rule_host_switch_total` | Counter | `rule_id`, `rule_name`, `from_host_id`, `to_host_id` | `lb.Pool.failoverRule` 在更新 active host 成功时递增 |
+| `spf_host_group_info` | Gauge | `host_id`, `host_name`, `group_id`, `group_name` | 恒为 1；在将 Host 加入/移出 Group 的 API 中增删；删除 Host 时若未先移出组，该映射可能需依赖运维侧清理或后续扩展 |
 
 ```
-# SSH Host 健康状态（1=healthy, 0=unhealthy）
-ssh_host_health{host="10.0.0.101"} 1
-
-# SSH Host 重连次数（Counter）
-ssh_host_reconnect_total{host="10.0.0.101"} 42
-
-# 端口转发在线状态（1=active, 0=inactive）
-forward_active{local_port="12001", target="10.0.0.101:3306"} 1
-
-# 当前活跃的 SSH 连接数（Gauge）
-ssh_connection_active 5
-
-# 端口转发流量字节数（Counter）
-ssh_forward_bytes_total{direction="in", local_port="12001"} 1048576
-
-# 健康检查延迟（Histogram）
-ssh_healthcheck_latency_seconds{host="10.0.0.101"} 0.023
-
-# LB 切换次数（Counter）
-lb_failover_total{from_host="10.0.0.101", to_host="10.0.0.102"} 3
+spf_host_health{host_id="1",host_name="node-a"} 1
+spf_rule_health{group_id="1",rule_id="1",rule_name="rule_30000"} 1
+spf_host_group_info{group_id="1",group_name="default",host_id="1",host_name="node-a"} 1
 ```
 
 ---
