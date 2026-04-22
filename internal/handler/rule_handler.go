@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"ssh-port-forwarder/internal/model"
+	"ssh-port-forwarder/internal/pkg/metrics"
 	"ssh-port-forwarder/internal/pkg/response"
 	"ssh-port-forwarder/internal/pkg/validator"
 	"ssh-port-forwarder/internal/service"
@@ -142,6 +143,8 @@ func (h *RuleHandler) Create(c *gin.Context) {
 	rule.Status = "active"
 	rule.ActiveHostID = host.ID
 
+	h.container.LBPool.RefreshHostRuleLoad(host.ID)
+
 	response.Success(c, rule)
 }
 
@@ -256,6 +259,8 @@ func (h *RuleHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	prevActiveHostID := rule.ActiveHostID
+
 	// 如果规则处于 active 状态，先停止转发
 	if rule.Status == "active" && rule.ActiveHostID > 0 {
 		if err := h.container.SSHManager.StopForwardRule(rule.ID, rule.ActiveHostID); err != nil {
@@ -267,6 +272,15 @@ func (h *RuleHandler) Delete(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, 500, "failed to delete rule: "+err.Error())
 		return
 	}
+
+	if prevActiveHostID > 0 {
+		h.container.LBPool.RefreshHostRuleLoad(prevActiveHostID)
+	}
+	metrics.CleanupRule(
+		strconv.FormatUint(rule.ID, 10),
+		rule.Name,
+		strconv.FormatUint(rule.GroupID, 10),
+	)
 
 	response.Success(c, gin.H{"message": "rule deleted"})
 }
@@ -288,6 +302,8 @@ func (h *RuleHandler) Restart(c *gin.Context) {
 		response.Error(c, http.StatusNotFound, 404, "rule not found")
 		return
 	}
+
+	prevActiveHostID := rule.ActiveHostID
 
 	// 停止旧的转发
 	if rule.ActiveHostID > 0 {
@@ -311,6 +327,9 @@ func (h *RuleHandler) Restart(c *gin.Context) {
 		}
 		rule.Status = "inactive"
 		rule.ActiveHostID = 0
+		if prevActiveHostID > 0 {
+			h.container.LBPool.RefreshHostRuleLoad(prevActiveHostID)
+		}
 		response.Success(c, rule)
 		return
 	}
@@ -339,6 +358,11 @@ func (h *RuleHandler) Restart(c *gin.Context) {
 
 	rule.Status = "active"
 	rule.ActiveHostID = host.ID
+
+	if prevActiveHostID > 0 && prevActiveHostID != host.ID {
+		h.container.LBPool.RefreshHostRuleLoad(prevActiveHostID)
+	}
+	h.container.LBPool.RefreshHostRuleLoad(host.ID)
 
 	response.Success(c, rule)
 }

@@ -10,6 +10,7 @@ import (
 
 	"ssh-port-forwarder/internal/model"
 	"ssh-port-forwarder/internal/pkg/crypto"
+	"ssh-port-forwarder/internal/pkg/metrics"
 	"ssh-port-forwarder/internal/pkg/response"
 	"ssh-port-forwarder/internal/pkg/validator"
 	"ssh-port-forwarder/internal/service"
@@ -333,10 +334,22 @@ func (h *HostHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	host, err := h.container.HostRepo.FindByID(id)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, 500, "failed to get host: "+err.Error())
+		return
+	}
+	if host == nil {
+		response.Error(c, http.StatusNotFound, 404, "host not found")
+		return
+	}
+
 	if err := h.container.HostRepo.Delete(id); err != nil {
 		response.Error(c, http.StatusInternalServerError, 500, "failed to delete host: "+err.Error())
 		return
 	}
+
+	metrics.CleanupHost(strconv.FormatUint(host.ID, 10), host.Name)
 
 	response.Success(c, gin.H{"message": "host deleted"})
 }

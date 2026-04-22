@@ -2,12 +2,14 @@ package health
 
 import (
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 	"ssh-port-forwarder/internal/model"
+	"ssh-port-forwarder/internal/pkg/metrics"
 	"ssh-port-forwarder/internal/repository"
 	"ssh-port-forwarder/internal/service/ssh_manager"
 )
@@ -177,6 +179,14 @@ func (c *Checker) checkHost(host *model.SSHHost) {
 					c.ruleHealth[rule.ID] = ruleHealth
 					c.mu.Unlock()
 
+					rid := strconv.FormatUint(rule.ID, 10)
+					gid := strconv.FormatUint(rule.GroupID, 10)
+					rh := 0.0
+					if ruleHealth.Healthy {
+						rh = 1.0
+					}
+					metrics.SPFRuleHealth.WithLabelValues(rid, rule.Name, gid).Set(rh)
+
 					log.Printf("[HealthChecker] Rule %d local=%t e2e=%t fallback=%t healthy=%t reason=%s",
 						rule.ID,
 						ruleHealth.LocalReachable,
@@ -205,6 +215,11 @@ func (c *Checker) checkHost(host *model.SSHHost) {
 						CheckedAt:      checkedAt,
 					}
 					c.mu.Unlock()
+					metrics.SPFRuleHealth.WithLabelValues(
+						strconv.FormatUint(rule.ID, 10),
+						rule.Name,
+						strconv.FormatUint(rule.GroupID, 10),
+					).Set(0)
 				}
 			}
 		}
@@ -227,6 +242,16 @@ func (c *Checker) checkHost(host *model.SSHHost) {
 	// 更新数据库
 	if err := c.hostRepo.UpdateHealthStatus(host.ID, status, score, checkedAt); err != nil {
 		log.Printf("[HealthChecker] Failed to update health status for host %d: %v", host.ID, err)
+	}
+
+	hostIDStr := strconv.FormatUint(host.ID, 10)
+	healthVal := 0.0
+	if status == "healthy" {
+		healthVal = 1.0
+	}
+	metrics.SPFHostHealth.WithLabelValues(hostIDStr, host.Name).Set(healthVal)
+	if sshResult.Success {
+		metrics.SPFHostLatency.WithLabelValues(hostIDStr, host.Name).Observe(sshResult.LatencyMs / 1000.0)
 	}
 
 	// 如果检测成功，更新最后成功时间

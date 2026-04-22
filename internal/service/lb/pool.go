@@ -3,9 +3,11 @@ package lb
 import (
 	"errors"
 	"log"
+	"strconv"
 	"sync"
 
 	"ssh-port-forwarder/internal/model"
+	"ssh-port-forwarder/internal/pkg/metrics"
 	"ssh-port-forwarder/internal/repository"
 	"ssh-port-forwarder/internal/service/health"
 	"ssh-port-forwarder/internal/service/ssh_manager"
@@ -65,6 +67,31 @@ func (p *Pool) Stop() {
 	close(p.stopCh)
 	p.wg.Wait()
 	log.Printf("[LB Pool] Stopped")
+}
+
+// RefreshHostRuleLoad recalibrates spf_host_rule_load for a host (e.g. after rule create outside failover/activate).
+func (p *Pool) RefreshHostRuleLoad(hostID uint64) {
+	p.updateHostRuleLoad(hostID, "")
+}
+
+// updateHostRuleLoad sets spf_host_rule_load from the DB active-rule count; resolves host name when empty.
+func (p *Pool) updateHostRuleLoad(hostID uint64, hostName string) {
+	if hostID == 0 {
+		return
+	}
+	name := hostName
+	if name == "" {
+		h, err := p.hostRepo.FindByID(hostID)
+		if err != nil || h == nil {
+			return
+		}
+		name = h.Name
+	}
+	count, err := p.ruleRepo.CountActiveByHostID(hostID)
+	if err != nil {
+		return
+	}
+	metrics.SPFHostRuleLoad.WithLabelValues(strconv.FormatUint(hostID, 10), name).Set(float64(count))
 }
 
 // handleHealthEvent 处理健康事件
@@ -212,6 +239,15 @@ func (p *Pool) failoverRule(rule *model.ForwardRule) error {
 	if err := p.ruleRepo.UpdateActiveHost(rule.ID, newHost.ID); err != nil {
 		log.Printf("[LB Pool] Failed to update active host for rule %d: %v", rule.ID, err)
 		// 继续处理，不要中断
+	} else {
+		metrics.SPFRuleHostSwitchTotal.WithLabelValues(
+			strconv.FormatUint(rule.ID, 10),
+			rule.Name,
+			strconv.FormatUint(oldHostID, 10),
+			strconv.FormatUint(newHost.ID, 10),
+		).Inc()
+		p.updateHostRuleLoad(oldHostID, "")
+		p.updateHostRuleLoad(newHost.ID, newHost.Name)
 	}
 
 	log.Printf("[LB Pool] Rule %d failed over from host %d to host %d",
@@ -307,6 +343,8 @@ func (p *Pool) activateRule(rule *model.ForwardRule) error {
 	if err := p.ruleRepo.UpdateStatus(rule.ID, "active"); err != nil {
 		log.Printf("[LB Pool] Failed to update status for rule %d: %v", rule.ID, err)
 	}
+
+	p.updateHostRuleLoad(host.ID, host.Name)
 
 	log.Printf("[LB Pool] Rule %d reactivated on host %d", rule.ID, host.ID)
 	return nil
