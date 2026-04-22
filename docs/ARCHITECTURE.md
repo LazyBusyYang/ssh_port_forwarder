@@ -375,6 +375,8 @@ SSH Manager 建立新 Tunnel，切换转发
 | `spf_rule_host_switch_total` | Counter | `rule_id`, `rule_name`, `from_host_id`, `to_host_id` | `lb.Pool.failoverRule` 在更新 active host 成功时递增 |
 | `spf_host_group_info` | Gauge | `host_id`, `host_name`, `group_id`, `group_name` | 恒为 1；在将 Host 加入/移出 Group 的 API 中增删；删除 Host 时若未先移出组，该映射可能需依赖运维侧清理或后续扩展 |
 
+预置 Grafana 仪表盘（可导入）：仓库内 [grafana/dashboards/ssh-port-forwarder.json](../grafana/dashboards/ssh-port-forwarder.json)，变量与 `job` / `namespace` / `instance` 等抓取标签对齐。
+
 ```
 spf_host_health{host_id="1",host_name="node-a"} 1
 spf_rule_health{group_id="1",rule_id="1",rule_name="rule_30000"} 1

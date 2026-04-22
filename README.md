@@ -444,6 +444,8 @@ kubectl apply -f deployment.yaml
 
 `/metrics` 在默认注册表上同时暴露 **Go 运行时**（`go_*`）、**进程**（`process_*`）、**Prometheus handler**（`promhttp_*`）以及下列 **业务指标**（定义见 `internal/pkg/metrics/metrics.go`）。部分带标签的指标在首次写入前可能暂无样本行，属正常现象。
 
+Grafana 可导入仓库内预置仪表盘 JSON：**[grafana/dashboards/ssh-port-forwarder.json](grafana/dashboards/ssh-port-forwarder.json)**（Grafana 12.x：Dashboards → Import → Upload，并选择 Prometheus 数据源）。
+
 **业务指标一览：**
 
 | 指标名 | 类型 | 说明 |
