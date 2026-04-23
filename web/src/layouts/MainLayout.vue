@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-screen bg-gray-100 overflow-hidden">
+  <div class="flex h-viewport min-h-0 bg-gray-100 overflow-hidden">
     <!-- 左侧边栏 - 响应式：小屏幕时隐藏或变窄 -->
     <aside 
       class="bg-gray-900 text-gray-300 flex flex-col flex-shrink-0 transition-all duration-300"
@@ -171,8 +171,7 @@ const isMobile = ref(false)
 const sidebarCollapsed = ref(true)
 
 const checkScreenSize = () => {
-  // 竖屏 9:16 或宽度小于 768px 视为移动端
-  isMobile.value = window.innerWidth < 768 || window.innerHeight > window.innerWidth
+  isMobile.value = window.innerWidth < 768
 }
 
 const toggleSidebar = () => {
