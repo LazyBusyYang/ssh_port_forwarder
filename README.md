@@ -150,6 +150,8 @@ port_range:
 | `SPF_ENCRYPTION_KEY_PREVIOUS` | AES 上一个密钥 | `old-base64-key` |
 | `SPF_PORT_RANGE_MIN` | 端口范围最小值 | `30000` |
 | `SPF_PORT_RANGE_MAX` | 端口范围最大值 | `33000` |
+| `SPF_DEFAULT_ADMIN_USER` | 默认管理员用户名 | `admin` |
+| `SPF_DEFAULT_ADMIN_PASS` | 默认管理员密码 | `admin123` |
 
 ### 生成密钥
 
@@ -223,7 +225,7 @@ Usage of ./spf-server:
 首次启动后，系统会自动创建一个默认管理员账号：
 
 - 用户名: `admin`
-- 密码: `admin`
+- 密码: `admin123`
 
 **生产环境请务必修改默认密码！**
 
