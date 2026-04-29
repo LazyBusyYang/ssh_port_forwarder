@@ -294,7 +294,7 @@ const (
 |------|------|----------|
 | `RoundRobin` | 同一 Group 下多条 Rule 依次轮流分配到不同 Host | Group 内有多条 Rule 需要均匀分散 |
 | `LeastRules` | 当前承载最少活跃 Rule 的 Host 优先被选中 | 希望 Host 负载均衡（按规则数量） |
-| `Weighted` | 高权重 Host 承载更多 Rule；故障恢复后高权重 Host 优先切回 | Host 性能/带宽不对等时使用 |
+| `Weighted` | 按 `(当前活跃 Rule 数 + 1) / 权重` 选择归一化负载最低的 Host，使高权重 Host 承载更多 Rule | Host 性能/带宽不对等时使用 |
 
 > **注意**：当一个 Group 只有 1 条 Rule 时，LB 策略实质退化为 **优先级排序 + 故障切换**（Active-Standby）。
 

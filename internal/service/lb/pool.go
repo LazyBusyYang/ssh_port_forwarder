@@ -15,13 +15,19 @@ import (
 
 // Pool LB Pool 管理器
 type Pool struct {
-	mu         sync.RWMutex
-	groupRepo  repository.ForwardGroupRepository
-	ruleRepo   repository.ForwardRuleRepository
-	hostRepo   repository.SSHHostRepository
-	sshManager *ssh_manager.Manager
-	stopCh     chan struct{}
-	wg         sync.WaitGroup
+	mu              sync.RWMutex
+	groupRepo       repository.ForwardGroupRepository
+	ruleRepo        repository.ForwardRuleRepository
+	hostRepo        repository.SSHHostRepository
+	sshManager      *ssh_manager.Manager
+	strategyByGroup map[uint64]cachedStrategy
+	stopCh          chan struct{}
+	wg              sync.WaitGroup
+}
+
+type cachedStrategy struct {
+	name     string
+	strategy Strategy
 }
 
 // NewPool 创建新的 Pool 实例
@@ -32,11 +38,12 @@ func NewPool(
 	sshManager *ssh_manager.Manager,
 ) *Pool {
 	return &Pool{
-		groupRepo:  groupRepo,
-		ruleRepo:   ruleRepo,
-		hostRepo:   hostRepo,
-		sshManager: sshManager,
-		stopCh:     make(chan struct{}),
+		groupRepo:       groupRepo,
+		ruleRepo:        ruleRepo,
+		hostRepo:        hostRepo,
+		sshManager:      sshManager,
+		strategyByGroup: make(map[uint64]cachedStrategy),
+		stopCh:          make(chan struct{}),
 	}
 }
 
@@ -140,8 +147,8 @@ func (p *Pool) AssignHostForRule(rule *model.ForwardRule) (*model.SSHHost, error
 		activeRuleCounts[host.ID] = count
 	}
 
-	// 使用 Group 的策略选择 Host
-	strategy := NewStrategy(group.Strategy)
+	// 使用 Group 的策略选择 Host。策略实例按 Group 复用，避免 round_robin 计数器每次重置。
+	strategy := p.strategyForGroup(group.ID, group.Strategy)
 	selectedHost := strategy.SelectHost(healthyHosts, activeRuleCounts)
 
 	if selectedHost == nil {
@@ -149,6 +156,23 @@ func (p *Pool) AssignHostForRule(rule *model.ForwardRule) (*model.SSHHost, error
 	}
 
 	return selectedHost, nil
+}
+
+func (p *Pool) strategyForGroup(groupID uint64, strategyName string) Strategy {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	cached, ok := p.strategyByGroup[groupID]
+	if ok && cached.name == strategyName {
+		return cached.strategy
+	}
+
+	strategy := NewStrategy(strategyName)
+	p.strategyByGroup[groupID] = cachedStrategy{
+		name:     strategyName,
+		strategy: strategy,
+	}
+	return strategy
 }
 
 // HandleFailover 处理故障切换
