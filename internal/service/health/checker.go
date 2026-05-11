@@ -173,7 +173,7 @@ func (c *Checker) checkHost(host *model.SSHHost) {
 			log.Printf("[HealthChecker] Failed to list active rules: %v", err)
 		} else {
 			for _, rule := range rules {
-				if rule.ActiveHostID == host.ID {
+				if rule.ActiveHostID != nil && *rule.ActiveHostID == host.ID {
 					ruleHealth := c.checkRuleHealth(&rule, sshClient.GetClient(), checkedAt)
 					c.mu.Lock()
 					c.ruleHealth[rule.ID] = ruleHealth
@@ -202,7 +202,7 @@ func (c *Checker) checkHost(host *model.SSHHost) {
 		rules, err := c.ruleRepo.ListActive()
 		if err == nil {
 			for _, rule := range rules {
-				if rule.ActiveHostID == host.ID {
+				if rule.ActiveHostID != nil && *rule.ActiveHostID == host.ID {
 					c.mu.Lock()
 					c.ruleHealth[rule.ID] = RuleHealthResult{
 						RuleID:         rule.ID,

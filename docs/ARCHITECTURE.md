@@ -465,7 +465,7 @@ type ForwardRule struct {
     TargetPort   int        `gorm:"not null"`
     Protocol     string     `gorm:"size:16;default:'tcp'"`
     Status       string     // active / inactive
-    ActiveHostID uint64     // 当前承载该规则的 SSH Host
+    ActiveHostID *uint64    // 当前承载该规则的 SSH Host；未绑定时为 NULL（MySQL 外键不可写 0）
     // 关联 Preload：Group、ActiveHost
     CreatedAt    int64
     UpdatedAt    int64

@@ -44,7 +44,7 @@ type ForwardRuleRepository interface {
 	ListActive() ([]model.ForwardRule, error)
 	FindByLocalPort(port int) (*model.ForwardRule, error)
 	UpdateStatus(id uint64, status string) error
-	UpdateActiveHost(id uint64, hostID uint64) error
+	UpdateActiveHost(id uint64, hostID *uint64) error
 	CountActiveByHostID(hostID uint64) (int64, error)
 }
 

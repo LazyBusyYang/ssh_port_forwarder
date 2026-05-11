@@ -131,7 +131,7 @@ func (h *RuleHandler) Create(c *gin.Context) {
 	}
 
 	// 更新 Rule 状态
-	if err := h.container.RuleRepo.UpdateActiveHost(rule.ID, host.ID); err != nil {
+	if err := h.container.RuleRepo.UpdateActiveHost(rule.ID, &host.ID); err != nil {
 		response.Error(c, http.StatusInternalServerError, 500, "failed to update rule: "+err.Error())
 		return
 	}
@@ -141,7 +141,7 @@ func (h *RuleHandler) Create(c *gin.Context) {
 	}
 
 	rule.Status = "active"
-	rule.ActiveHostID = host.ID
+	rule.ActiveHostID = &host.ID
 
 	h.container.LBPool.RefreshHostRuleLoad(host.ID)
 
@@ -259,11 +259,11 @@ func (h *RuleHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	prevActiveHostID := rule.ActiveHostID
+	prevActiveHostID := rule.ActiveHostIDUint()
 
 	// 如果规则处于 active 状态，先停止转发
-	if rule.Status == "active" && rule.ActiveHostID > 0 {
-		if err := h.container.SSHManager.StopForwardRule(rule.ID, rule.ActiveHostID); err != nil {
+	if rule.Status == "active" && prevActiveHostID > 0 {
+		if err := h.container.SSHManager.StopForwardRule(rule.ID, prevActiveHostID); err != nil {
 			// 记录错误但继续删除
 		}
 	}
@@ -303,11 +303,11 @@ func (h *RuleHandler) Restart(c *gin.Context) {
 		return
 	}
 
-	prevActiveHostID := rule.ActiveHostID
+	prevActiveHostID := rule.ActiveHostIDUint()
 
 	// 停止旧的转发
-	if rule.ActiveHostID > 0 {
-		if err := h.container.SSHManager.StopForwardRule(rule.ID, rule.ActiveHostID); err != nil {
+	if prevActiveHostID > 0 {
+		if err := h.container.SSHManager.StopForwardRule(rule.ID, prevActiveHostID); err != nil {
 			// 记录错误但继续
 		}
 	}
@@ -321,12 +321,12 @@ func (h *RuleHandler) Restart(c *gin.Context) {
 			response.Error(c, http.StatusInternalServerError, 500, "failed to update rule status: "+err.Error())
 			return
 		}
-		if err := h.container.RuleRepo.UpdateActiveHost(rule.ID, 0); err != nil {
+		if err := h.container.RuleRepo.UpdateActiveHost(rule.ID, nil); err != nil {
 			response.Error(c, http.StatusInternalServerError, 500, "failed to update rule: "+err.Error())
 			return
 		}
 		rule.Status = "inactive"
-		rule.ActiveHostID = 0
+		rule.ActiveHostID = nil
 		if prevActiveHostID > 0 {
 			h.container.LBPool.RefreshHostRuleLoad(prevActiveHostID)
 		}
@@ -347,7 +347,7 @@ func (h *RuleHandler) Restart(c *gin.Context) {
 	}
 
 	// 更新 Rule 状态
-	if err := h.container.RuleRepo.UpdateActiveHost(rule.ID, host.ID); err != nil {
+	if err := h.container.RuleRepo.UpdateActiveHost(rule.ID, &host.ID); err != nil {
 		response.Error(c, http.StatusInternalServerError, 500, "failed to update rule: "+err.Error())
 		return
 	}
@@ -357,7 +357,7 @@ func (h *RuleHandler) Restart(c *gin.Context) {
 	}
 
 	rule.Status = "active"
-	rule.ActiveHostID = host.ID
+	rule.ActiveHostID = &host.ID
 
 	if prevActiveHostID > 0 && prevActiveHostID != host.ID {
 		h.container.LBPool.RefreshHostRuleLoad(prevActiveHostID)
