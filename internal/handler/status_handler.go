@@ -150,7 +150,7 @@ func (h *StatusHandler) Rules(c *gin.Context) {
 		TargetPort      int    `json:"target_port"`
 		Protocol        string `json:"protocol"`
 		Status          string `json:"status"`
-		ActiveHostID    uint64 `json:"active_host_id"`
+		ActiveHostID    *uint64 `json:"active_host_id,omitempty"`
 		ActiveHostName  string `json:"active_host_name"`
 		HealthStatus    string `json:"health_status"`
 		LocalReachable  bool   `json:"local_reachable"`
@@ -165,8 +165,8 @@ func (h *StatusHandler) Rules(c *gin.Context) {
 	var result []RuleStatus
 	for _, rule := range rules {
 		activeHostName := ""
-		if rule.ActiveHostID > 0 {
-			activeHostName = hostMap[rule.ActiveHostID]
+		if rule.ActiveHostID != nil && *rule.ActiveHostID > 0 {
+			activeHostName = hostMap[*rule.ActiveHostID]
 		}
 		ruleHealth, ok := ruleHealthMap[rule.ID]
 		healthStatus := "unknown"

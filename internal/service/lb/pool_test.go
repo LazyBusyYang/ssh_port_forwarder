@@ -195,7 +195,7 @@ func (r *testRuleRepo) UpdateStatus(id uint64, status string) error {
 	return nil
 }
 
-func (r *testRuleRepo) UpdateActiveHost(id uint64, hostID uint64) error {
+func (r *testRuleRepo) UpdateActiveHost(id uint64, hostID *uint64) error {
 	return nil
 }
 

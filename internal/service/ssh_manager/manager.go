@@ -48,15 +48,16 @@ func (m *Manager) Start() error {
 	}
 
 	for _, rule := range rules {
-		if rule.ActiveHostID == 0 {
+		activeHostID := rule.ActiveHostIDUint()
+		if activeHostID == 0 {
 			continue
 		}
 
 		// 获取对应的 Host
-		host, err := m.hostRepo.FindByID(rule.ActiveHostID)
+		host, err := m.hostRepo.FindByID(activeHostID)
 		if err != nil {
-			log.Printf("[SSHManager] Failed to find host %d for rule %d: %v", 
-				rule.ActiveHostID, rule.ID, err)
+			log.Printf("[SSHManager] Failed to find host %d for rule %d: %v",
+				activeHostID, rule.ID, err)
 			continue
 		}
 

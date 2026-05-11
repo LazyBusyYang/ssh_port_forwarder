@@ -186,7 +186,7 @@ func (p *Pool) HandleFailover(hostID uint64) {
 
 	var affectedRules []model.ForwardRule
 	for _, rule := range rules {
-		if rule.ActiveHostID == hostID {
+		if rule.ActiveHostID != nil && *rule.ActiveHostID == hostID {
 			affectedRules = append(affectedRules, rule)
 		}
 	}
@@ -207,7 +207,7 @@ func (p *Pool) HandleFailover(hostID uint64) {
 
 // failoverRule 对单条 Rule 执行故障切换
 func (p *Pool) failoverRule(rule *model.ForwardRule) error {
-	oldHostID := rule.ActiveHostID
+	oldHostID := rule.ActiveHostIDUint()
 
 	// 1. 停止旧转发
 	if oldHostID != 0 {
@@ -228,7 +228,7 @@ func (p *Pool) failoverRule(rule *model.ForwardRule) error {
 			log.Printf("[LB Pool] Failed to update rule %d status to inactive: %v",
 				rule.ID, updateErr)
 		}
-		if updateErr := p.ruleRepo.UpdateActiveHost(rule.ID, 0); updateErr != nil {
+		if updateErr := p.ruleRepo.UpdateActiveHost(rule.ID, nil); updateErr != nil {
 			log.Printf("[LB Pool] Failed to clear active host for rule %d: %v",
 				rule.ID, updateErr)
 		}
@@ -260,7 +260,7 @@ func (p *Pool) failoverRule(rule *model.ForwardRule) error {
 	}
 
 	// 5. 更新 Rule 状态
-	if err := p.ruleRepo.UpdateActiveHost(rule.ID, newHost.ID); err != nil {
+	if err := p.ruleRepo.UpdateActiveHost(rule.ID, &newHost.ID); err != nil {
 		log.Printf("[LB Pool] Failed to update active host for rule %d: %v", rule.ID, err)
 		// 继续处理，不要中断
 	} else {
@@ -361,7 +361,7 @@ func (p *Pool) activateRule(rule *model.ForwardRule) error {
 	}
 
 	// 更新 Rule 状态
-	if err := p.ruleRepo.UpdateActiveHost(rule.ID, host.ID); err != nil {
+	if err := p.ruleRepo.UpdateActiveHost(rule.ID, &host.ID); err != nil {
 		log.Printf("[LB Pool] Failed to update active host for rule %d: %v", rule.ID, err)
 	}
 	if err := p.ruleRepo.UpdateStatus(rule.ID, "active"); err != nil {

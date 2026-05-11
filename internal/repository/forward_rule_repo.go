@@ -86,8 +86,14 @@ func (r *forwardRuleRepository) UpdateStatus(id uint64, status string) error {
 	return r.db.Model(&model.ForwardRule{}).Where("id = ?", id).Update("status", status).Error
 }
 
-func (r *forwardRuleRepository) UpdateActiveHost(id uint64, hostID uint64) error {
-	return r.db.Model(&model.ForwardRule{}).Where("id = ?", id).Update("active_host_id", hostID).Error
+func (r *forwardRuleRepository) UpdateActiveHost(id uint64, hostID *uint64) error {
+	var v any
+	if hostID == nil {
+		v = nil
+	} else {
+		v = *hostID
+	}
+	return r.db.Model(&model.ForwardRule{}).Where("id = ?", id).Update("active_host_id", v).Error
 }
 
 func (r *forwardRuleRepository) CountActiveByHostID(hostID uint64) (int64, error) {
