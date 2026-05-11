@@ -475,6 +475,23 @@ const closeModal = () => {
 
 // 保存主机
 const saveHost = async () => {
+  // 必填字段校验
+  if (!String(form.value.name || '').trim()) {
+    showMessage('主机名称不能为空', 'error')
+    return
+  }
+  if (!String(form.value.host || '').trim()) {
+    showMessage('主机地址不能为空', 'error')
+    return
+  }
+  if (!form.value.port || form.value.port < 1 || form.value.port > 65535) {
+    showMessage('端口号必须在 1-65535 范围内', 'error')
+    return
+  }
+  if (!String(form.value.username || '').trim()) {
+    showMessage('用户名不能为空', 'error')
+    return
+  }
   if (authDataRequired.value && !String(form.value.auth_data || '').trim()) {
     showMessage('请填写密码或私钥', 'error')
     return
