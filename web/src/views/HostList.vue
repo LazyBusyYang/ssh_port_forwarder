@@ -129,6 +129,11 @@
         </div>
 
         <form @submit.prevent="saveHost" class="p-6">
+          <!-- 全局表单错误 -->
+          <div v-if="formError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-sm text-red-600">{{ formError }}</p>
+          </div>
+
           <!-- Name -->
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-500">*</span></label>
@@ -136,9 +141,11 @@
               v-model="form.name"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              @input="clearFieldError('name')"
+              :class="['w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2', fieldErrors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500']"
               placeholder="输入主机名称"
             />
+            <p v-if="fieldErrors.name" class="text-xs text-red-600 mt-1">{{ fieldErrors.name }}</p>
           </div>
 
           <!-- Host -->
@@ -148,9 +155,11 @@
               v-model="form.host"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              @input="clearFieldError('host')"
+              :class="['w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2', fieldErrors.host ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500']"
               placeholder="例如：192.168.1.100 或 example.com"
             />
+            <p v-if="fieldErrors.host" class="text-xs text-red-600 mt-1">{{ fieldErrors.host }}</p>
           </div>
 
           <!-- Port -->
@@ -162,8 +171,10 @@
               required
               min="1"
               max="65535"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              @input="clearFieldError('port')"
+              :class="['w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2', fieldErrors.port ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500']"
             />
+            <p v-if="fieldErrors.port" class="text-xs text-red-600 mt-1">{{ fieldErrors.port }}</p>
           </div>
 
           <!-- Username -->
@@ -173,9 +184,11 @@
               v-model="form.username"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              @input="clearFieldError('username')"
+              :class="['w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2', fieldErrors.username ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500']"
               placeholder="输入用户名"
             />
+            <p v-if="fieldErrors.username" class="text-xs text-red-600 mt-1">{{ fieldErrors.username }}</p>
           </div>
 
           <!-- Auth Method -->
@@ -218,7 +231,8 @@
               v-model="form.auth_data"
               type="password"
               :required="authDataRequired"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              @input="clearFieldError('auth_data')"
+              :class="['w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2', fieldErrors.auth_data ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500']"
               :placeholder="
                 isCopying
                   ? '留空则服务端复制源主机密文'
@@ -232,7 +246,8 @@
               v-model="form.auth_data"
               :required="authDataRequired"
               rows="4"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+              @input="clearFieldError('auth_data')"
+              :class="['w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 font-mono text-sm', fieldErrors.auth_data ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500']"
               :placeholder="
                 isCopying
                   ? '留空则服务端复制源主机密文'
@@ -241,6 +256,7 @@
                     : '-----BEGIN OPENSSH PRIVATE KEY-----'
               "
             ></textarea>
+            <p v-if="fieldErrors.auth_data" class="text-xs text-red-600 mt-1">{{ fieldErrors.auth_data }}</p>
           </div>
 
           <!-- Weight -->
@@ -251,9 +267,11 @@
               type="number"
               min="1"
               max="100"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              @input="clearFieldError('weight')"
+              :class="['w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2', fieldErrors.weight ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500']"
             />
-            <p class="text-xs text-gray-500 mt-1">权重越高，负载均衡时分配的流量越多</p>
+            <p v-if="fieldErrors.weight" class="text-xs text-red-600 mt-1">{{ fieldErrors.weight }}</p>
+            <p v-else class="text-xs text-gray-500 mt-1">权重越高，负载均衡时分配的流量越多</p>
           </div>
 
           <!-- 按钮 -->
@@ -401,6 +419,89 @@ const defaultForm: HostForm = {
 }
 const form = ref<HostForm>({ ...defaultForm })
 
+// 字段错误状态
+type HostFormField = 'name' | 'host' | 'port' | 'username' | 'auth_method' | 'auth_data' | 'weight'
+const fieldErrors = ref<Partial<Record<HostFormField, string>>>({})
+const formError = ref('') // 全局表单错误
+
+// 清除字段错误
+const clearFieldError = (field: HostFormField) => {
+  delete fieldErrors.value[field]
+}
+
+// 设置字段错误
+const setFieldError = (field: HostFormField, message: string) => {
+  fieldErrors.value[field] = message
+}
+
+// 清除所有字段错误
+const clearAllFieldErrors = () => {
+  fieldErrors.value = {}
+  formError.value = ''
+}
+
+// 验证表单，返回是否有错误
+const validateHostForm = (): boolean => {
+  clearAllFieldErrors()
+  let hasError = false
+
+  if (!String(form.value.name || '').trim()) {
+    setFieldError('name', '主机名称不能为空')
+    hasError = true
+  }
+  if (!String(form.value.host || '').trim()) {
+    setFieldError('host', '主机地址不能为空')
+    hasError = true
+  }
+  if (!form.value.port || form.value.port < 1 || form.value.port > 65535) {
+    setFieldError('port', '端口号必须在 1-65535 范围内')
+    hasError = true
+  }
+  if (!String(form.value.username || '').trim()) {
+    setFieldError('username', '用户名不能为空')
+    hasError = true
+  }
+  if (authDataRequired.value && !String(form.value.auth_data || '').trim()) {
+    if (isEditing.value && form.value.auth_method !== originalAuthMethod.value) {
+      const fromMethod = originalAuthMethod.value === 'password' ? '密码' : '私钥'
+      const toMethod = form.value.auth_method === 'password' ? '密码' : '私钥'
+      setFieldError('auth_data', `认证方式已从「${fromMethod}」变更为「${toMethod}」，请填写新的${toMethod}`)
+    } else {
+      setFieldError('auth_data', '请填写密码或私钥')
+    }
+    hasError = true
+  }
+  if (form.value.weight < 1 || form.value.weight > 100) {
+    setFieldError('weight', '权重必须在 1-100 范围内')
+    hasError = true
+  }
+
+  if (hasError) {
+    formError.value = '请检查表单错误'
+  }
+  return !hasError
+}
+
+// 将后端错误映射到字段
+const mapBackendErrorToField = (message: string) => {
+  const msg = message.toLowerCase()
+  if (msg.includes('name') || msg.includes('主机名称')) {
+    setFieldError('name', message)
+  } else if (msg.includes('host') || msg.includes('主机地址')) {
+    setFieldError('host', message)
+  } else if (msg.includes('port') || msg.includes('端口')) {
+    setFieldError('port', message)
+  } else if (msg.includes('username') || msg.includes('用户名')) {
+    setFieldError('username', message)
+  } else if (msg.includes('auth_data') || msg.includes('auth') || msg.includes('password') || msg.includes('私钥') || msg.includes('private key')) {
+    setFieldError('auth_data', message)
+  } else if (msg.includes('weight') || msg.includes('权重')) {
+    setFieldError('weight', message)
+  } else {
+    formError.value = message
+  }
+}
+
 // 获取主机列表
 const fetchHosts = async () => {
   loading.value = true
@@ -456,6 +557,7 @@ const openEditModal = (host: Host) => {
     auth_data: '',
     weight: host.weight
   }
+  clearAllFieldErrors()
   showModal.value = true
 }
 
@@ -474,6 +576,7 @@ const openCopyModal = (host: Host) => {
     auth_data: '',
     weight: host.weight
   }
+  clearAllFieldErrors()
   showModal.value = true
 }
 
@@ -489,35 +592,13 @@ const closeModal = () => {
   isCopying.value = false
   copySourceId.value = null
   form.value = { ...defaultForm }
+  clearAllFieldErrors()
 }
 
 // 保存主机
 const saveHost = async () => {
-  // 必填字段校验
-  if (!String(form.value.name || '').trim()) {
-    showMessage('主机名称不能为空', 'error')
-    return
-  }
-  if (!String(form.value.host || '').trim()) {
-    showMessage('主机地址不能为空', 'error')
-    return
-  }
-  if (!form.value.port || form.value.port < 1 || form.value.port > 65535) {
-    showMessage('端口号必须在 1-65535 范围内', 'error')
-    return
-  }
-  if (!String(form.value.username || '').trim()) {
-    showMessage('用户名不能为空', 'error')
-    return
-  }
-  if (authDataRequired.value && !String(form.value.auth_data || '').trim()) {
-    if (isEditing.value && form.value.auth_method !== originalAuthMethod.value) {
-      const fromMethod = originalAuthMethod.value === 'password' ? '密码' : '私钥'
-      const toMethod = form.value.auth_method === 'password' ? '密码' : '私钥'
-      showMessage(`认证方式已从「${fromMethod}」变更为「${toMethod}」，请填写新的${toMethod}`, 'error')
-    } else {
-      showMessage('请填写密码或私钥', 'error')
-    }
+  // 字段级校验
+  if (!validateHostForm()) {
     return
   }
   saving.value = true
@@ -552,7 +633,7 @@ const saveHost = async () => {
         closeModal()
         fetchHosts()
       } else {
-        showMessage(res.data.message || '更新失败', 'error')
+        mapBackendErrorToField(res.data.message || '更新失败')
       }
     } else {
       const res = await api.post('/hosts', form.value)
@@ -561,11 +642,11 @@ const saveHost = async () => {
         closeModal()
         fetchHosts()
       } else {
-        showMessage(res.data.message || '创建失败', 'error')
+        mapBackendErrorToField(res.data.message || '创建失败')
       }
     }
   } catch (err: any) {
-    showMessage(err.response?.data?.message || '操作失败', 'error')
+    mapBackendErrorToField(err.response?.data?.message || '操作失败')
   } finally {
     saving.value = false
   }
@@ -612,6 +693,7 @@ const testConnection = async (id: number) => {
     showMessage(err.response?.data?.message || '连接测试失败', 'error')
   } finally {
     testingId.value = null
+    await fetchHosts()
   }
 }
 

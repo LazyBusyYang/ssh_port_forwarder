@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/ssh"
@@ -448,11 +449,22 @@ func (h *HostHandler) Test(c *gin.Context) {
 	// 尝试连接
 	addr := fmt.Sprintf("%s:%d", host.Host, host.Port)
 	client, err := ssh.Dial("tcp", addr, config)
+	now := time.Now().Unix()
 	if err != nil {
+		// 更新为 unhealthy 状态，但不影响连接测试结果的返回
+		if updateErr := h.container.HostRepo.UpdateHealthStatus(id, "unhealthy", 0, now); updateErr != nil {
+			// 仅记录日志，不掩盖实际错误
+			fmt.Printf("failed to update health status to unhealthy: %v\n", updateErr)
+		}
 		response.Error(c, http.StatusBadRequest, 400, "connection failed: "+err.Error())
 		return
 	}
 	defer client.Close()
+
+	// 连接成功，更新为 healthy 状态
+	if updateErr := h.container.HostRepo.UpdateHealthStatus(id, "healthy", 100, now); updateErr != nil {
+		fmt.Printf("failed to update health status to healthy: %v\n", updateErr)
+	}
 
 	response.Success(c, gin.H{"message": "connection successful"})
 }
