@@ -468,7 +468,7 @@ func (h *HostHandler) Test(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, 400, "connection failed: "+err.Error())
 		return
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	now := time.Now().Unix()
 	if err := h.container.HostRepo.UpdateHealthStatus(id, "healthy", 100, now); err != nil {

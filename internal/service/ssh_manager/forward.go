@@ -130,7 +130,7 @@ func (c *SSHClient) acceptConnections(entry *ForwardEntry) {
 		client := c.GetClient()
 		if client == nil {
 			log.Printf("[SSHClient] SSH client not connected, closing connection")
-			localConn.Close()
+			_ = localConn.Close()
 			continue
 		}
 
@@ -141,7 +141,7 @@ func (c *SSHClient) acceptConnections(entry *ForwardEntry) {
 
 // handleConnection 处理单个连接的双向转发
 func handleConnection(localConn net.Conn, remoteAddr string, client *ssh.Client, stopCh chan struct{}) {
-	defer localConn.Close()
+	defer func() { _ = localConn.Close() }()
 
 	// 建立 SSH channel 到远程地址
 	remoteConn, err := client.Dial("tcp", remoteAddr)
@@ -149,7 +149,7 @@ func handleConnection(localConn net.Conn, remoteAddr string, client *ssh.Client,
 		log.Printf("[SSHClient] Failed to dial remote %s: %v", remoteAddr, err)
 		return
 	}
-	defer remoteConn.Close()
+	defer func() { _ = remoteConn.Close() }()
 
 	log.Printf("[SSHClient] New connection: %s <-> %s", localConn.RemoteAddr(), remoteAddr)
 

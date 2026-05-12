@@ -36,7 +36,7 @@ func TCPDetect(host string, port int, timeout time.Duration) CheckResult {
 			LatencyMs: float64(time.Since(start).Milliseconds()),
 		}
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	return CheckResult{
 		Success:   true,
@@ -91,7 +91,7 @@ func TunnelDetect(sshClient *ssh.Client, targetHost string, targetPort int, time
 			LatencyMs: float64(time.Since(start).Milliseconds()),
 		}
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	return CheckResult{
 		Success:   true,
@@ -111,7 +111,7 @@ func LocalForwardDetect(localPort int, timeout time.Duration) CheckResult {
 			LatencyMs: float64(time.Since(start).Milliseconds()),
 		}
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	return CheckResult{
 		Success:   true,
@@ -131,7 +131,7 @@ func EndToEndHTTPViaLocal(localPort int, timeout time.Duration) CheckResult {
 			LatencyMs: float64(time.Since(start).Milliseconds()),
 		}
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	_ = conn.SetDeadline(time.Now().Add(timeout))
 	req := []byte("GET / HTTP/1.0\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")

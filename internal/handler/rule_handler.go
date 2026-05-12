@@ -265,6 +265,7 @@ func (h *RuleHandler) Delete(c *gin.Context) {
 	if rule.Status == "active" && prevActiveHostID > 0 {
 		if err := h.container.SSHManager.StopForwardRule(rule.ID, prevActiveHostID); err != nil {
 			// 记录错误但继续删除
+			log.Printf("[RuleHandler] Failed to stop forward rule %d on host %d during delete: %v", rule.ID, prevActiveHostID, err)
 		}
 	}
 
@@ -309,6 +310,7 @@ func (h *RuleHandler) Restart(c *gin.Context) {
 	if prevActiveHostID > 0 {
 		if err := h.container.SSHManager.StopForwardRule(rule.ID, prevActiveHostID); err != nil {
 			// 记录错误但继续
+			log.Printf("[RuleHandler] Failed to stop forward rule %d on host %d during restart: %v", rule.ID, prevActiveHostID, err)
 		}
 	}
 

@@ -47,7 +47,7 @@ func (c *SSHClient) StartReconnectLoop() {
 	// 关闭现有 SSH 连接
 	c.mu.Lock()
 	if c.client != nil {
-		c.client.Close()
+		_ = c.client.Close()
 		c.client = nil
 	}
 	c.mu.Unlock()

@@ -154,12 +154,12 @@ port_range:
 // TestLoadWithEnvOverride 测试环境变量覆盖
 func TestLoadWithEnvOverride(t *testing.T) {
 	// 设置环境变量
-	os.Setenv("SPF_ENCRYPTION_KEY", "env-encryption-key")
-	os.Setenv("SPF_ENCRYPTION_KEY_PREVIOUS", "env-encryption-key-prev")
-	os.Setenv("JWT_SECRET_CURRENT", "env-jwt-current")
-	os.Setenv("JWT_SECRET_PREVIOUS", "env-jwt-previous")
-	os.Setenv("SPF_PORT_RANGE_MIN", "50000")
-	os.Setenv("SPF_PORT_RANGE_MAX", "55000")
+	_ = os.Setenv("SPF_ENCRYPTION_KEY", "env-encryption-key")
+	_ = os.Setenv("SPF_ENCRYPTION_KEY_PREVIOUS", "env-encryption-key-prev")
+	_ = os.Setenv("JWT_SECRET_CURRENT", "env-jwt-current")
+	_ = os.Setenv("JWT_SECRET_PREVIOUS", "env-jwt-previous")
+	_ = os.Setenv("SPF_PORT_RANGE_MIN", "50000")
+	_ = os.Setenv("SPF_PORT_RANGE_MAX", "55000")
 
 	// 清理环境变量
 	defer cleanEnvVars()
@@ -213,8 +213,8 @@ port_range:
 	}
 
 	// 设置环境变量覆盖部分配置
-	os.Setenv("SPF_ENCRYPTION_KEY", "env-encryption-key")
-	os.Setenv("SPF_PORT_RANGE_MIN", "50000")
+	_ = os.Setenv("SPF_ENCRYPTION_KEY", "env-encryption-key")
+	_ = os.Setenv("SPF_PORT_RANGE_MIN", "50000")
 
 	// 清理环境变量
 	defer cleanEnvVars()
@@ -262,6 +262,6 @@ func cleanEnvVars() {
 		"SPF_PORT_RANGE_MAX",
 	}
 	for _, env := range envVars {
-		os.Unsetenv(env)
+		_ = os.Unsetenv(env)
 	}
 }
