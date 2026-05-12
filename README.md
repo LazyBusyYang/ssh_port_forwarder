@@ -325,6 +325,19 @@ export ENCRYPTION_KEY="your-base64-key"
 docker-compose up -d
 ```
 
+### 本地 Docker MySQL（开发 / 验收）
+
+用于在本地以 **MySQL** 验证迁移与「删除转发规则后同一 `local_port` 可再创建」等行为：
+
+```bash
+docker compose -f docker-compose.dev-mysql.yml up -d
+cp config/config.dev-mysql.yaml.example config/config.dev-mysql.yaml
+# 按需修改 DSN、JWT、encryption.key 后：
+go run ./cmd/server/ -config config/config.dev-mysql.yaml
+```
+
+**版本升级（MySQL 生产）**：升级至包含「转发规则物理删除」的版本后，进程在 `AutoMigrate` 成功后会**幂等删除** `forward_rules` 表中历史**仅软删除**残留行（`deleted_at` 非空），以释放 `local_port` 唯一索引，避免再次出现 `1062 Duplicate entry`；表中不再保留上述残留行，操作追溯可依赖审计日志。升级前建议备份 `forward_rules` 表（例如 `mysqldump` 单表）。
+
 ### Kubernetes 部署
 
 创建 `deployment.yaml`：

@@ -38,3 +38,7 @@ WHERE active_host_id = 0;
 ## API 行为
 
 JSON 中 `active_host_id` 在无绑定时可能为 **`null`** 或省略（`omitempty`），与历史上数字 **0** 不完全等价；依赖脚本若以 `0` 判断需改为判断缺省/`null`。
+
+## 相关：转发规则软删与 `local_port` 唯一索引
+
+新版本在 `AutoMigrate` 成功后会**幂等物理删除** `forward_rules` 中仅软删残留行（`deleted_at` 非空），并改为 API 删除时走物理删，以释放 `local_port` 唯一索引、避免误报 `1062`。运维背景与备份建议见仓库根目录 [README.md](../README.md) 中「本地 Docker MySQL」与「版本升级（MySQL 生产）」小节。
