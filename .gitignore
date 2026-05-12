@@ -41,6 +41,7 @@ go.work.sum
 
 # Config files with sensitive data
 config/config.yaml
+config/config.dev-mysql.yaml
 config/*.local.yaml
 
 # Database files

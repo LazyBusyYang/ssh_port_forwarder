@@ -77,6 +77,15 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	}
 	log.Printf("[Container] Database auto migration completed")
 
+	// 3a. 清理历史上仅软删的 forward_rules，释放 local_port 唯一槽位（幂等）。
+	res := adapter.DB.Unscoped().Where("deleted_at IS NOT NULL").Delete(&model.ForwardRule{})
+	if res.Error != nil {
+		return nil, fmt.Errorf("failed to purge soft-deleted forward rules: %w", res.Error)
+	}
+	if res.RowsAffected > 0 {
+		log.Printf("[Container] Purged soft-deleted forward_rules (%d rows)", res.RowsAffected)
+	}
+
 	// 3b. 旧库无 name 时补全为 rule_{local_port}（方言无关）
 	var unnamedRules []model.ForwardRule
 	if err := adapter.DB.Where("name = ''").Find(&unnamedRules).Error; err != nil {

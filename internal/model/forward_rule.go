@@ -16,7 +16,8 @@ type ForwardRule struct {
 	ActiveHost   *SSHHost       `gorm:"foreignKey:ActiveHostID" json:"active_host,omitempty"`
 	CreatedAt    int64          `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt    int64          `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+	// 删除 API 使用 Unscoped 物理删；保留字段仅为兼容已有表结构，勿对 Rule 使用 GORM 默认软删 Delete。
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // ActiveHostIDUint 返回当前承载 Host 的 id；未绑定时为 0（与历史「用 0 表示无」的数值语义一致，便于日志与指标）。

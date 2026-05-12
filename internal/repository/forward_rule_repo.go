@@ -35,7 +35,8 @@ func (r *forwardRuleRepository) Update(rule *model.ForwardRule) error {
 }
 
 func (r *forwardRuleRepository) Delete(id uint64) error {
-	return r.db.Delete(&model.ForwardRule{}, id).Error
+	// 物理删除：避免软删行仍占用 local_port 唯一索引（MySQL 1062）。
+	return r.db.Unscoped().Delete(&model.ForwardRule{}, id).Error
 }
 
 func (r *forwardRuleRepository) List(page, pageSize int) ([]model.ForwardRule, int64, error) {
