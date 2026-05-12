@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/ssh"
@@ -391,6 +392,14 @@ func (h *HostHandler) Delete(c *gin.Context) {
 	response.Success(c, gin.H{"message": "host deleted"})
 }
 
+// markUnhealthy updates host health status to unhealthy; best-effort, logs on failure.
+func (h *HostHandler) markUnhealthy(id uint64) {
+	now := time.Now().Unix()
+	if err := h.container.HostRepo.UpdateHealthStatus(id, "unhealthy", 0, now); err != nil {
+		fmt.Printf("failed to update health status to unhealthy: %v\n", err)
+	}
+}
+
 // Test 测试 SSH 连接
 func (h *HostHandler) Test(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
@@ -417,6 +426,8 @@ func (h *HostHandler) Test(c *gin.Context) {
 		h.container.Config.Encryption.KeyPrevious,
 	)
 	if err != nil {
+		// 解密失败也标记为 unhealthy
+		h.markUnhealthy(id)
 		response.Error(c, http.StatusInternalServerError, 500, "failed to decrypt auth data: "+err.Error())
 		return
 	}
@@ -429,11 +440,15 @@ func (h *HostHandler) Test(c *gin.Context) {
 	case "private_key":
 		signer, err := ssh.ParsePrivateKey([]byte(authData))
 		if err != nil {
+			// 私钥解析失败也标记为 unhealthy
+			h.markUnhealthy(id)
 			response.Error(c, http.StatusBadRequest, 400, "invalid private key: "+err.Error())
 			return
 		}
 		authMethod = ssh.PublicKeys(signer)
 	default:
+		// 不支持的认证方式也标记为 unhealthy
+		h.markUnhealthy(id)
 		response.Error(c, http.StatusBadRequest, 400, "unsupported auth method: "+host.AuthMethod)
 		return
 	}
@@ -449,10 +464,16 @@ func (h *HostHandler) Test(c *gin.Context) {
 	addr := fmt.Sprintf("%s:%d", host.Host, host.Port)
 	client, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
+		h.markUnhealthy(id)
 		response.Error(c, http.StatusBadRequest, 400, "connection failed: "+err.Error())
 		return
 	}
 	defer client.Close()
+
+	now := time.Now().Unix()
+	if err := h.container.HostRepo.UpdateHealthStatus(id, "healthy", 100, now); err != nil {
+		fmt.Printf("failed to update health status to healthy: %v\n", err)
+	}
 
 	response.Success(c, gin.H{"message": "connection successful"})
 }

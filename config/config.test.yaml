@@ -1,0 +1,23 @@
+server:
+  host: 0.0.0.0
+  port: 8080
+  env: test
+
+database:
+  type: mysql
+  mysql:
+    dsn: root:password@tcp(127.0.0.1:3307)/spf_ui_test?charset=utf8mb4&parseTime=True&loc=Local
+
+jwt:
+  secret_current: ui-test-jwt-secret
+  secret_previous: ""
+  token_expire: 86400
+  refresh_expire: 604800
+
+encryption:
+  key: PlAFgrHoMTtdjY7VfuSPmmBeZf1DaFhHDDNkmMdKR6k=
+  key_previous: ""
+
+port_range:
+  min: 30000
+  max: 33000
