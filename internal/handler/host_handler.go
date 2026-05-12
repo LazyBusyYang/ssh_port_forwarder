@@ -285,6 +285,15 @@ func (h *HostHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// 认证方式变更检测
+	authMethodChanged := req.AuthMethod != "" && req.AuthMethod != host.AuthMethod
+
+	// 如果认证方式变更但未提供新的认证材料，拒绝保存
+	if authMethodChanged && req.AuthData == "" {
+		response.Error(c, http.StatusBadRequest, 400, "auth_data is required when auth_method changes")
+		return
+	}
+
 	// 更新字段
 	if req.Name != "" {
 		host.Name = req.Name
@@ -306,6 +315,13 @@ func (h *HostHandler) Update(c *gin.Context) {
 		host.AuthMethod = req.AuthMethod
 	}
 	if req.AuthData != "" {
+		// 当认证方式为私钥时，验证私钥格式
+		if host.AuthMethod == "private_key" {
+			if _, err := ssh.ParsePrivateKey([]byte(req.AuthData)); err != nil {
+				response.Error(c, http.StatusBadRequest, 400, "invalid private key format: "+err.Error())
+				return
+			}
+		}
 		encryptedData, nonce, err := crypto.Encrypt(req.AuthData, h.container.Config.Encryption.Key)
 		if err != nil {
 			response.Error(c, http.StatusInternalServerError, 500, "failed to encrypt auth data: "+err.Error())

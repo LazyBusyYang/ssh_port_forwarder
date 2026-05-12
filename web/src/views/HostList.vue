@@ -185,12 +185,17 @@
               v-model="form.auth_method"
               required
               :disabled="isCopying"
+              @change="onAuthMethodChange"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
             >
               <option value="password">密码</option>
               <option value="private_key">私钥</option>
             </select>
             <p v-if="isCopying" class="text-xs text-gray-500 mt-1">与源主机一致；密文在服务端复制，不经浏览器</p>
+            <p v-else-if="isEditing" class="text-xs text-amber-600 mt-1">
+              <span v-if="form.auth_method !== originalAuthMethod">⚠️ 认证方式已变更，必须填写新的密码/私钥</span>
+              <span v-else>切换认证方式会要求重新填写认证信息</span>
+            </p>
           </div>
 
           <!-- Auth Data -->
@@ -202,6 +207,12 @@
             <p v-if="isCopying" class="text-xs text-gray-600 mb-2">
               留空则沿用源主机认证密文（仅服务端复制）；填写则表示用新密码/私钥覆盖副本
             </p>
+            <p v-else-if="isEditing && !authDataRequired" class="text-xs text-blue-600 mb-2">
+              ℹ️ 留空则复用当前已保存的认证信息；认证内容不会下发到浏览器
+            </p>
+            <p v-else-if="isEditing && authDataRequired" class="text-xs text-amber-600 mb-2">
+              ⚠️ 认证方式已从「{{ originalAuthMethod === 'password' ? '密码' : '私钥' }}」变更为「{{ form.auth_method === 'password' ? '密码' : '私钥' }}」，必须填写新的{{ form.auth_method === 'password' ? '密码' : '私钥' }}
+            </p>
             <input
               v-if="form.auth_method === 'password'"
               v-model="form.auth_data"
@@ -212,7 +223,7 @@
                 isCopying
                   ? '留空则服务端复制源主机密文'
                   : isEditing && !authDataRequired
-                    ? '留空则不修改（认证方式未变更）'
+                    ? '留空则复用已保存的认证信息'
                     : '输入密码'
               "
             />
@@ -226,7 +237,7 @@
                 isCopying
                   ? '留空则服务端复制源主机密文'
                   : isEditing && !authDataRequired
-                    ? '留空则不修改（认证方式未变更）'
+                    ? '留空则复用已保存的认证信息'
                     : '-----BEGIN OPENSSH PRIVATE KEY-----'
               "
             ></textarea>
@@ -466,6 +477,13 @@ const openCopyModal = (host: Host) => {
   showModal.value = true
 }
 
+const onAuthMethodChange = () => {
+  // 当认证方式改变时，清空 auth_data 以便用户输入新的认证信息
+  if (isEditing.value && form.value.auth_method !== originalAuthMethod.value) {
+    form.value.auth_data = ''
+  }
+}
+
 const closeModal = () => {
   showModal.value = false
   isCopying.value = false
@@ -493,7 +511,13 @@ const saveHost = async () => {
     return
   }
   if (authDataRequired.value && !String(form.value.auth_data || '').trim()) {
-    showMessage('请填写密码或私钥', 'error')
+    if (isEditing.value && form.value.auth_method !== originalAuthMethod.value) {
+      const fromMethod = originalAuthMethod.value === 'password' ? '密码' : '私钥'
+      const toMethod = form.value.auth_method === 'password' ? '密码' : '私钥'
+      showMessage(`认证方式已从「${fromMethod}」变更为「${toMethod}」，请填写新的${toMethod}`, 'error')
+    } else {
+      showMessage('请填写密码或私钥', 'error')
+    }
     return
   }
   saving.value = true
