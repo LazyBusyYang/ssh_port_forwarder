@@ -184,11 +184,14 @@ const valueRange = computed(() => maxValue.value - minValue.value)
 
 const dataPoints = computed(() => {
   if (props.data.length === 0) return []
-  
+
   return props.data.map((d, i) => ({
     x: paddingLeft + (i / (props.data.length - 1 || 1)) * chartWidth.value,
-    y: paddingTop + chartHeight.value - ((d.y - minValue.value) / valueRange.value) * chartHeight.value,
-    original: d
+    y:
+      paddingTop +
+      chartHeight.value -
+      ((d.y - minValue.value) / valueRange.value) * chartHeight.value,
+    original: d,
   }))
 })
 
@@ -208,7 +211,11 @@ const xLabels = computed(() => {
 })
 
 function getY(value: number): number {
-  return paddingTop + chartHeight.value - ((value - minValue.value) / valueRange.value) * chartHeight.value
+  return (
+    paddingTop +
+    chartHeight.value -
+    ((value - minValue.value) / valueRange.value) * chartHeight.value
+  )
 }
 
 function formatTime(timestamp: number): string {
@@ -217,7 +224,7 @@ function formatTime(timestamp: number): string {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 
@@ -225,7 +232,7 @@ function formatShortTime(timestamp: number): string {
   const date = new Date(timestamp * 1000)
   const now = new Date()
   const isToday = date.toDateString() === now.toDateString()
-  
+
   if (isToday) {
     return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   }

@@ -11,44 +11,44 @@ export function useStatusWebSocket() {
   const connected = ref(false)
   let ws: WebSocket | null = null
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-  
+
   const connect = () => {
     // 清除之前的重连定时器
     if (reconnectTimer) {
       clearTimeout(reconnectTimer)
       reconnectTimer = null
     }
-    
+
     const authStore = useAuthStore()
     if (!authStore.token) {
       console.warn('No token available for WebSocket connection')
       return
     }
-    
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const wsUrl = `${protocol}//${window.location.host}/api/v1/ws/status?token=${authStore.token}`
-    
+
     try {
       ws = new WebSocket(wsUrl)
-      
+
       ws.onopen = () => {
         console.log('WebSocket connected')
         connected.value = true
       }
-      
-      ws.onclose = (event) => {
+
+      ws.onclose = event => {
         console.log('WebSocket closed:', event.code, event.reason)
         connected.value = false
         ws = null
         // 5秒后重连
         reconnectTimer = setTimeout(connect, 5000)
       }
-      
-      ws.onerror = (error) => {
+
+      ws.onerror = error => {
         console.error('WebSocket error:', error)
       }
-      
-      ws.onmessage = (event) => {
+
+      ws.onmessage = event => {
         try {
           const data = JSON.parse(event.data) as WebSocketMessage
           messages.value.push(data)
@@ -66,7 +66,7 @@ export function useStatusWebSocket() {
       reconnectTimer = setTimeout(connect, 5000)
     }
   }
-  
+
   const disconnect = () => {
     if (reconnectTimer) {
       clearTimeout(reconnectTimer)
@@ -80,7 +80,7 @@ export function useStatusWebSocket() {
     }
     connected.value = false
   }
-  
+
   const send = (data: any) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(data))
@@ -88,22 +88,22 @@ export function useStatusWebSocket() {
       console.warn('WebSocket is not connected')
     }
   }
-  
+
   // 自动连接
   onMounted(() => {
     connect()
   })
-  
+
   // 清理
   onUnmounted(() => {
     disconnect()
   })
-  
-  return { 
-    messages, 
-    connected, 
-    connect, 
+
+  return {
+    messages,
+    connected,
+    connect,
     disconnect,
-    send
+    send,
   }
 }

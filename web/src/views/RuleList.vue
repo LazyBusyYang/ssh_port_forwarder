@@ -8,19 +8,34 @@
         class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 whitespace-nowrap"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
         </svg>
         <span>创建转发规则</span>
       </button>
     </div>
 
     <!-- 错误提示 -->
-    <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-3">
+    <div
+      v-if="error"
+      class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-3"
+    >
       <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
       </svg>
       <span class="text-red-700">{{ error }}</span>
-      <button @click="fetchRules" class="text-red-600 hover:text-red-800 underline ml-auto">重试</button>
+      <button @click="fetchRules" class="text-red-600 hover:text-red-800 underline ml-auto">
+        重试
+      </button>
     </div>
 
     <!-- 加载状态 -->
@@ -30,9 +45,22 @@
     </div>
 
     <!-- 空状态 -->
-    <div v-else-if="rules.length === 0" class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-      <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+    <div
+      v-else-if="rules.length === 0"
+      class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center"
+    >
+      <svg
+        class="w-16 h-16 text-gray-300 mx-auto mb-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+        />
       </svg>
       <h3 class="text-lg font-medium text-gray-900 mb-1">暂无转发规则</h3>
       <p class="text-gray-500 mb-4">创建第一个转发规则来配置端口转发</p>
@@ -45,85 +73,120 @@
     </div>
 
     <!-- 表格 - 添加水平滚动 -->
-    <div v-else class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col min-h-0">
+    <div
+      v-else
+      class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col min-h-0"
+    >
       <div class="overflow-x-auto flex-1">
         <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Local Port</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Protocol</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Group</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active Host</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="rule in rules" :key="rule.id" class="hover:bg-gray-50">
-            <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-              {{ rule.name || '-' }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-              {{ rule.local_port }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-gray-700">
-              {{ rule.target_host }}:{{ rule.target_port }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 uppercase">
-                {{ rule.protocol }}
-              </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-gray-700">
-              {{ rule.group?.name || '-' }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-2 py-1 text-xs rounded-full" :class="getStatusClass(rule.status)">
-                {{ getStatusLabel(rule.status) }}
-              </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-gray-700">
-              {{ rule.active_host?.name || '-' }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
-              <button
-                @click="restartRule(rule.id)"
-                :disabled="restartingRuleId === rule.id"
-                class="text-green-600 hover:text-green-800 text-sm"
+          <thead class="bg-gray-50">
+            <tr>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                {{ restartingRuleId === rule.id ? '重启中...' : '重启' }}
-              </button>
-              <button
-                @click="openEditModal(rule)"
-                class="text-indigo-600 hover:text-indigo-800 text-sm"
+                Name
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                编辑
-              </button>
-              <button
-                @click="openCopyModal(rule)"
-                class="text-violet-600 hover:text-violet-800 text-sm"
+                Local Port
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                复制
-              </button>
-              <button
-                @click="confirmDelete(rule)"
-                class="text-red-600 hover:text-red-800 text-sm"
+                Target
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                删除
-              </button>
-            </td>
-          </tr>
-        </tbody>
+                Protocol
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Group
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Status
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Active Host
+              </th>
+              <th
+                class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                操作
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="rule in rules" :key="rule.id" class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                {{ rule.name || '-' }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                {{ rule.local_port }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-gray-700">
+                {{ rule.target_host }}:{{ rule.target_port }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 uppercase">
+                  {{ rule.protocol }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-gray-700">
+                {{ rule.group?.name || '-' }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 py-1 text-xs rounded-full" :class="getStatusClass(rule.status)">
+                  {{ getStatusLabel(rule.status) }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-gray-700">
+                {{ rule.active_host?.name || '-' }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
+                <button
+                  @click="restartRule(rule.id)"
+                  :disabled="restartingRuleId === rule.id"
+                  class="text-green-600 hover:text-green-800 text-sm"
+                >
+                  {{ restartingRuleId === rule.id ? '重启中...' : '重启' }}
+                </button>
+                <button
+                  @click="openEditModal(rule)"
+                  class="text-indigo-600 hover:text-indigo-800 text-sm"
+                >
+                  编辑
+                </button>
+                <button
+                  @click="openCopyModal(rule)"
+                  class="text-violet-600 hover:text-violet-800 text-sm"
+                >
+                  复制
+                </button>
+                <button
+                  @click="confirmDelete(rule)"
+                  class="text-red-600 hover:text-red-800 text-sm"
+                >
+                  删除
+                </button>
+              </td>
+            </tr>
+          </tbody>
         </table>
       </div>
 
       <!-- 分页 -->
-      <div class="bg-gray-50 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 gap-2">
-        <div class="text-sm text-gray-500">
-          共 {{ total }} 条记录
-        </div>
+      <div
+        class="bg-gray-50 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 gap-2"
+      >
+        <div class="text-sm text-gray-500">共 {{ total }} 条记录</div>
         <div class="flex items-center space-x-2">
           <button
             @click="prevPage"
@@ -145,13 +208,21 @@
     </div>
 
     <!-- 创建/编辑弹窗 -->
-    <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div
+      v-if="showModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+    >
       <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-900">{{ modalTitle }}</h3>
           <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -260,13 +331,26 @@
     </div>
 
     <!-- 删除确认弹窗 -->
-    <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div
+      v-if="showDeleteModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
       <div class="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4">
         <div class="px-6 py-4">
           <div class="flex items-center space-x-3 mb-4">
             <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-              <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <svg
+                class="w-6 h-6 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
               </svg>
             </div>
             <h3 class="text-lg font-semibold text-gray-900">确认删除</h3>
@@ -274,7 +358,9 @@
           <p class="text-gray-600">
             确定要删除转发规则
             <strong>{{ ruleToDelete?.name || ruleToDelete?.local_port }}</strong>
-            （{{ ruleToDelete?.local_port }} → {{ ruleToDelete?.target_host }}:{{ ruleToDelete?.target_port }}）吗？此操作不可恢复。
+            （{{ ruleToDelete?.local_port }} → {{ ruleToDelete?.target_host }}:{{
+              ruleToDelete?.target_port
+            }}）吗？此操作不可恢复。
           </p>
         </div>
         <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
@@ -296,14 +382,22 @@
     </div>
 
     <!-- 重启成功提示 -->
-    <div v-if="restartSuccess" class="fixed bottom-4 right-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center space-x-3 shadow-lg">
+    <div
+      v-if="restartSuccess"
+      class="fixed bottom-4 right-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center space-x-3 shadow-lg"
+    >
       <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
       </svg>
       <span class="text-green-700">重启成功</span>
       <button @click="restartSuccess = false" class="text-green-600 hover:text-green-800">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
         </svg>
       </button>
     </div>
@@ -359,9 +453,7 @@ const modalTitle = computed(() => {
 const duplicateNameWarning = computed(() => {
   const name = form.value.name.trim()
   if (!name) return false
-  return rules.value.some(
-    (r) => r.name === name && r.id !== (editingRuleId.value ?? 0)
-  )
+  return rules.value.some(r => r.name === name && r.id !== (editingRuleId.value ?? 0))
 })
 const form = ref<{
   name: string
@@ -376,7 +468,7 @@ const form = ref<{
   local_port: 30000,
   target_host: '',
   target_port: 80,
-  protocol: 'tcp'
+  protocol: 'tcp',
 })
 const editingRuleId = ref<number | null>(null)
 
@@ -389,12 +481,12 @@ const restartSuccess = ref(false)
 
 const statusLabels: Record<string, string> = {
   active: '运行中',
-  inactive: '已停止'
+  inactive: '已停止',
 }
 
 const statusClasses: Record<string, string> = {
   active: 'bg-green-100 text-green-800',
-  inactive: 'bg-gray-100 text-gray-800'
+  inactive: 'bg-gray-100 text-gray-800',
 }
 
 const getStatusLabel = (status?: string) => {
@@ -451,7 +543,7 @@ const openCreateModal = () => {
     local_port: 30000,
     target_host: '',
     target_port: 80,
-    protocol: 'tcp'
+    protocol: 'tcp',
   }
   editingRuleId.value = null
   fetchGroups()
@@ -467,7 +559,7 @@ const openEditModal = (rule: Rule) => {
     local_port: rule.local_port,
     target_host: rule.target_host,
     target_port: rule.target_port,
-    protocol: rule.protocol
+    protocol: rule.protocol,
   }
   editingRuleId.value = rule.id
   fetchGroups()
@@ -484,7 +576,7 @@ const openCopyModal = (rule: Rule) => {
     local_port: 0,
     target_host: rule.target_host,
     target_port: rule.target_port,
-    protocol: rule.protocol
+    protocol: rule.protocol,
   }
   fetchGroups()
   showModal.value = true
@@ -536,7 +628,7 @@ const saveRule = async () => {
     const payload = {
       ...form.value,
       name: form.value.name.trim(),
-      group_id: parseInt(String(form.value.group_id), 10)
+      group_id: parseInt(String(form.value.group_id), 10),
     }
     if (isEditing.value && editingRuleId.value) {
       await api.put(`/rules/${editingRuleId.value}`, payload)
