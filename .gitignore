@@ -70,3 +70,6 @@ temp/
 
 # OS generated files
 Thumbs.db
+.agent
+local
+node_modules

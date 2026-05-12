@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/ssh"
@@ -15,6 +16,21 @@ import (
 	"ssh-port-forwarder/internal/pkg/validator"
 	"ssh-port-forwarder/internal/service"
 )
+
+// validateAuthMaterial validates auth data format based on auth method.
+// Returns error if validation fails, nil if valid or empty (caller decides empty handling).
+func validateAuthMaterial(authMethod, authData string) error {
+	if strings.TrimSpace(authData) == "" {
+		return nil // Empty is handled by caller
+	}
+	if authMethod == "private_key" {
+		if _, err := ssh.ParsePrivateKey([]byte(authData)); err != nil {
+			return fmt.Errorf("invalid private key format: %w", err)
+		}
+	}
+	// Password just needs to be non-empty (already checked above)
+	return nil
+}
 
 type HostHandler struct {
 	container *service.Container
@@ -124,6 +140,12 @@ func (h *HostHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// 校验认证材料格式
+	if err := validateAuthMaterial(req.AuthMethod, req.AuthData); err != nil {
+		response.Error(c, http.StatusBadRequest, 400, err.Error())
+		return
+	}
+
 	// 加密 auth_data
 	encryptedData, nonce, err := crypto.Encrypt(req.AuthData, h.container.Config.Encryption.Key)
 	if err != nil {
@@ -158,12 +180,12 @@ func (h *HostHandler) Create(c *gin.Context) {
 
 // CopyHostRequest 从已有 Host 复制；name 必填，其余可覆盖。不传 auth_data 时在库内复制源记录的密文，永不下发前端。
 type CopyHostRequest struct {
-	Name       string `json:"name" binding:"required"`
-	Host       string `json:"host"`
-	Port       int    `json:"port"`
-	Username   string `json:"username"`
-	Weight     int    `json:"weight"`
-	AuthData   string `json:"auth_data"`
+	Name     string `json:"name" binding:"required"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Weight   int    `json:"weight"`
+	AuthData string `json:"auth_data"`
 }
 
 // Copy 基于源 Host 创建副本，默认在服务端复制 AuthData/AuthNonce/AuthMethod；仅当请求中提供 auth_data 时用新明文加密写入。
@@ -218,8 +240,9 @@ func (h *HostHandler) Copy(c *gin.Context) {
 		host.Weight = req.Weight
 	}
 
-	if req.AuthData != "" {
-		if err := validator.ValidateAuthMethod(host.AuthMethod); err != nil {
+	if strings.TrimSpace(req.AuthData) != "" {
+		// 校验认证材料格式
+		if err := validateAuthMaterial(host.AuthMethod, req.AuthData); err != nil {
 			response.Error(c, http.StatusBadRequest, 400, err.Error())
 			return
 		}
@@ -285,6 +308,15 @@ func (h *HostHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// 认证方式变更检测
+	authMethodChanged := req.AuthMethod != "" && req.AuthMethod != host.AuthMethod
+
+	// 如果认证方式变更但未提供新的认证材料，拒绝保存（trim whitespace to prevent bypass）
+	if authMethodChanged && strings.TrimSpace(req.AuthData) == "" {
+		response.Error(c, http.StatusBadRequest, 400, "auth_data is required when auth_method changes")
+		return
+	}
+
 	// 更新字段
 	if req.Name != "" {
 		host.Name = req.Name
@@ -305,7 +337,12 @@ func (h *HostHandler) Update(c *gin.Context) {
 		}
 		host.AuthMethod = req.AuthMethod
 	}
-	if req.AuthData != "" {
+	if strings.TrimSpace(req.AuthData) != "" {
+		// 校验认证材料格式
+		if err := validateAuthMaterial(host.AuthMethod, req.AuthData); err != nil {
+			response.Error(c, http.StatusBadRequest, 400, err.Error())
+			return
+		}
 		encryptedData, nonce, err := crypto.Encrypt(req.AuthData, h.container.Config.Encryption.Key)
 		if err != nil {
 			response.Error(c, http.StatusInternalServerError, 500, "failed to encrypt auth data: "+err.Error())

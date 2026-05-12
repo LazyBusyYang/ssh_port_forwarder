@@ -426,6 +426,25 @@ kubectl apply -f deployment.yaml
 | `/api/v1/hosts` | GET/POST | SSH Host 列表/创建 |
 | `/api/v1/hosts/:id` | GET/PUT/DELETE | SSH Host 详情/更新/删除（响应不含 `auth_data` / `auth_nonce`） |
 | `/api/v1/hosts/:id/copy` | POST | 基于源 Host 复制新记录（可在服务端复用密文，无需下发前端） |
+
+#### SSH Host 认证信息安全复用说明
+
+编辑或复制 SSH Host 时，系统支持**安全复用已有认证信息**，避免敏感材料下发到浏览器：
+
+- **编辑 Host**：
+  - 认证方式不变 + 认证字段留空 → 复用现有加密密文（安全）
+  - 认证方式变更 + 认证字段留空 → **被拒绝**（400错误），因为密码密文无法当作私钥使用
+  - 认证方式变更 + 提供新认证材料 → 使用新材料重新加密保存
+  - 前端编辑时切换认证方式会清空认证字段，并提示必须填写新材料
+
+- **复制 Host**：
+  - 认证字段留空 → 服务端直接复制源 Host 的加密密文，认证材料**不会传输到浏览器**
+  - 填写新认证材料 → 使用新材料覆盖，按源 Host 的认证方式加密
+
+- **安全设计**：
+  - 列表/详情/复制 API 响应均不包含 `auth_data` / `auth_nonce`
+  - 编辑时认证字段默认空，placeholder 提示复用行为
+  - 私钥格式在保存前会被校验，避免保存无效私钥
 | `/api/v1/hosts/:id/test` | POST | 测试 SSH 连接 |
 | `/api/v1/groups` | GET/POST | 转发组列表/创建 |
 | `/api/v1/groups/:id` | GET/PUT/DELETE | 转发组详情/更新/删除 |
