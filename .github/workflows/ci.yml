@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
@@ -30,8 +30,8 @@ jobs:
       - name: Check Prettier formatting
         run: cd web && npm run format:check
 
-  backend-lint:
-    name: Backend Lint
+  web-embed:
+    name: Build web (for go:embed)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -40,56 +40,59 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
-      - name: Install frontend dependencies
+      - name: Install dependencies
         run: cd web && npm ci
 
       - name: Build frontend
         run: cd web && npm run build
+
+      - name: Upload web/dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+
+  backend-lint:
+    name: Backend Lint
+    needs: web-embed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download web/dist
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.25'
 
-      - name: Check gofmt
-        run: |
-          if [ -n "$(gofmt -l .)" ]; then
-            echo "Go code is not formatted:"
-            gofmt -d .
-            exit 1
-          fi
-
-      - name: Run go vet
-        run: go vet ./...
-
       - name: Run golangci-lint
-        run: |
-          docker run --rm -v $(pwd):/app -w /app \
-            golangci/golangci-lint:v1.64.5 golangci-lint run
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.5
 
   backend-unit-test:
     name: Backend Unit Tests
+    needs: web-embed
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Download web/dist
+        uses: actions/download-artifact@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install frontend dependencies
-        run: cd web && npm ci
-
-      - name: Build frontend
-        run: cd web && npm run build
+          name: web-dist
+          path: web/dist
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -103,23 +106,17 @@ jobs:
 
   sqlite-integration-test:
     name: SQLite Integration Tests
+    needs: web-embed
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Download web/dist
+        uses: actions/download-artifact@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install frontend dependencies
-        run: cd web && npm ci
-
-      - name: Build frontend
-        run: cd web && npm run build
+          name: web-dist
+          path: web/dist
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -131,6 +128,7 @@ jobs:
 
   mysql-integration-test:
     name: MySQL Integration Tests
+    needs: web-embed
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -149,18 +147,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Download web/dist
+        uses: actions/download-artifact@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install frontend dependencies
-        run: cd web && npm ci
-
-      - name: Build frontend
-        run: cd web && npm run build
+          name: web-dist
+          path: web/dist
 
       - name: Setup Go
         uses: actions/setup-go@v5
