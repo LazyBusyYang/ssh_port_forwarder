@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint . --ext .vue,.ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .vue,.ts,.tsx,.js,.jsx --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "axios": "^1.15.1",
@@ -15,10 +19,15 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@rushstack/eslint-patch": "^1.10.5",
     "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^24.12.2",
     "@vitejs/plugin-vue": "^6.0.6",
+    "@vue/eslint-config-typescript": "^14.5.0",
     "@vue/tsconfig": "^0.9.1",
+    "eslint": "^9.22.0",
+    "eslint-plugin-vue": "^10.0.0",
+    "prettier": "^3.5.3",
     "tailwindcss": "^4.2.2",
     "typescript": "~6.0.2",
     "vite": "^8.0.9",
