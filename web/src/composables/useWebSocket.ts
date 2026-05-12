@@ -3,7 +3,25 @@ import { useAuthStore } from '../stores/auth'
 
 export interface WebSocketMessage {
   type: string
-  data: any
+  data: unknown
+}
+
+function parseStatusMessage(raw: string): WebSocketMessage | null {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return null
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    return null
+  }
+  const obj = parsed as Record<string, unknown>
+  const t = obj.type
+  if (typeof t !== 'string') {
+    return null
+  }
+  return { type: t, data: 'data' in obj ? obj.data : undefined }
 }
 
 export function useStatusWebSocket() {
@@ -49,15 +67,15 @@ export function useStatusWebSocket() {
       }
 
       ws.onmessage = event => {
-        try {
-          const data = JSON.parse(event.data) as WebSocketMessage
-          messages.value.push(data)
-          // 保留最近 100 条
-          if (messages.value.length > 100) {
-            messages.value = messages.value.slice(-100)
-          }
-        } catch (err) {
-          console.error('Failed to parse WebSocket message:', err)
+        const msg = parseStatusMessage(event.data)
+        if (!msg) {
+          console.error('Failed to parse WebSocket message:', event.data)
+          return
+        }
+        messages.value.push(msg)
+        // 保留最近 100 条
+        if (messages.value.length > 100) {
+          messages.value = messages.value.slice(-100)
         }
       }
     } catch (error) {
@@ -81,7 +99,7 @@ export function useStatusWebSocket() {
     connected.value = false
   }
 
-  const send = (data: any) => {
+  const send = (data: Record<string, unknown>) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(data))
     } else {

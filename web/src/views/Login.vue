@@ -147,6 +147,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { getApiErrorMessage } from '../utils/apiError'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -163,8 +164,8 @@ const handleLogin = async () => {
   try {
     await authStore.login(username.value, password.value)
     router.push('/dashboard')
-  } catch (err: any) {
-    error.value = err.response?.data?.message || '登录失败，请检查用户名和密码'
+  } catch (err: unknown) {
+    error.value = getApiErrorMessage(err, '登录失败，请检查用户名和密码')
   } finally {
     loading.value = false
   }

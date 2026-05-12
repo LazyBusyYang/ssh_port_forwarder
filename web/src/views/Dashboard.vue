@@ -146,6 +146,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import api from '../api'
+import { getApiErrorMessage } from '../utils/apiError'
 
 interface OverviewData {
   total_hosts: number
@@ -176,8 +177,8 @@ const fetchOverview = async () => {
     } else {
       error.value = res.data.message || '获取数据失败'
     }
-  } catch (err: any) {
-    error.value = err.response?.data?.message || '网络错误，请稍后重试'
+  } catch (err: unknown) {
+    error.value = getApiErrorMessage(err, '网络错误，请稍后重试')
   } finally {
     loading.value = false
   }

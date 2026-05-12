@@ -436,6 +436,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import api from '../api'
+import { getApiErrorMessage } from '../utils/apiError'
 
 interface Host {
   id: number
@@ -519,8 +520,8 @@ const fetchGroups = async () => {
     const response = await api.get(`/groups?page=${page.value}&page_size=${pageSize.value}`)
     groups.value = response.data.data || []
     total.value = response.data.total || 0
-  } catch (err: any) {
-    error.value = err.response?.data?.message || '获取转发组列表失败'
+  } catch (err: unknown) {
+    error.value = getApiErrorMessage(err, '获取转发组列表失败')
   } finally {
     loading.value = false
   }
@@ -564,8 +565,8 @@ const openCopyModal = async (group: Group) => {
     const response = await api.get(`/groups/${group.id}`)
     const detail = response.data.data as Group
     copyingHosts.value = detail.hosts || []
-  } catch (err: any) {
-    error.value = err.response?.data?.message || '获取转发组详情失败'
+  } catch (err: unknown) {
+    error.value = getApiErrorMessage(err, '获取转发组详情失败')
     return
   }
   isEditing.value = false
@@ -603,8 +604,8 @@ const saveGroup = async () => {
     }
     closeModal()
     fetchGroups()
-  } catch (err: any) {
-    error.value = err.response?.data?.message || '保存失败'
+  } catch (err: unknown) {
+    error.value = getApiErrorMessage(err, '保存失败')
   } finally {
     saving.value = false
   }
@@ -624,8 +625,8 @@ const deleteGroup = async () => {
     showDeleteModal.value = false
     groupToDelete.value = null
     fetchGroups()
-  } catch (err: any) {
-    error.value = err.response?.data?.message || '删除失败'
+  } catch (err: unknown) {
+    error.value = getApiErrorMessage(err, '删除失败')
   } finally {
     deleting.value = false
   }
@@ -636,8 +637,8 @@ const viewGroupDetail = async (id: number) => {
     const response = await api.get(`/groups/${id}`)
     groupDetail.value = response.data.data
     showDetailModal.value = true
-  } catch (err: any) {
-    error.value = err.response?.data?.message || '获取详情失败'
+  } catch (err: unknown) {
+    error.value = getApiErrorMessage(err, '获取详情失败')
   }
 }
 
@@ -654,8 +655,8 @@ const openAddHostModal = async () => {
     const existingHostIds = new Set(groupDetail.value?.hosts?.map(h => h.id) || [])
     availableHosts.value = allHosts.filter((h: Host) => !existingHostIds.has(h.id))
     showAddHostModal.value = true
-  } catch (err: any) {
-    error.value = err.response?.data?.message || '获取 Host 列表失败'
+  } catch (err: unknown) {
+    error.value = getApiErrorMessage(err, '获取 Host 列表失败')
   }
 }
 
@@ -674,8 +675,8 @@ const addHost = async () => {
     })
     closeAddHostModal()
     viewGroupDetail(groupDetail.value.id)
-  } catch (err: any) {
-    error.value = err.response?.data?.message || '添加 Host 失败'
+  } catch (err: unknown) {
+    error.value = getApiErrorMessage(err, '添加 Host 失败')
   } finally {
     addingHost.value = false
   }
@@ -687,8 +688,8 @@ const removeHost = async (hostId: number) => {
   try {
     await api.delete(`/groups/${groupDetail.value.id}/hosts/${hostId}`)
     viewGroupDetail(groupDetail.value.id)
-  } catch (err: any) {
-    error.value = err.response?.data?.message || '移除 Host 失败'
+  } catch (err: unknown) {
+    error.value = getApiErrorMessage(err, '移除 Host 失败')
   }
 }
 

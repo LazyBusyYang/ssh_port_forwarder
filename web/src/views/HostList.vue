@@ -478,6 +478,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import api from '../api'
+import { getApiErrorMessage } from '../utils/apiError'
 
 interface Host {
   id: number
@@ -661,8 +662,8 @@ const fetchHosts = async () => {
     } else {
       error.value = res.data.message || '获取数据失败'
     }
-  } catch (err: any) {
-    error.value = err.response?.data?.message || '网络错误，请稍后重试'
+  } catch (err: unknown) {
+    error.value = getApiErrorMessage(err, '网络错误，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -788,8 +789,8 @@ const saveHost = async () => {
         mapBackendErrorToField(res.data.message || '创建失败')
       }
     }
-  } catch (err: any) {
-    mapBackendErrorToField(err.response?.data?.message || '操作失败')
+  } catch (err: unknown) {
+    mapBackendErrorToField(getApiErrorMessage(err, '操作失败'))
   } finally {
     saving.value = false
   }
@@ -815,8 +816,8 @@ const deleteHost = async () => {
     } else {
       showMessage(res.data.message || '删除失败', 'error')
     }
-  } catch (err: any) {
-    showMessage(err.response?.data?.message || '删除失败', 'error')
+  } catch (err: unknown) {
+    showMessage(getApiErrorMessage(err, '删除失败'), 'error')
   } finally {
     deleting.value = false
   }
@@ -832,8 +833,8 @@ const testConnection = async (id: number) => {
     } else {
       showMessage(res.data.message || '连接失败', 'error')
     }
-  } catch (err: any) {
-    showMessage(err.response?.data?.message || '连接测试失败', 'error')
+  } catch (err: unknown) {
+    showMessage(getApiErrorMessage(err, '连接测试失败'), 'error')
   } finally {
     testingId.value = null
     await fetchHosts()

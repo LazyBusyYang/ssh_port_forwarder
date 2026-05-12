@@ -1,6 +1,0 @@
-dist
-node_modules
-*.d.ts
-public
-*.config.js
-*.config.ts

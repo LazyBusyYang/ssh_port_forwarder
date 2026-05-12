@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext .vue,.ts,.tsx,.js,.jsx",
+    "lint": "eslint . --ext .vue,.ts,.tsx,.js,.jsx --max-warnings 0",
+    "lint:ci": "eslint . --ext .vue,.ts,.tsx,.js,.jsx --max-warnings 0",
     "lint:fix": "eslint . --ext .vue,.ts,.tsx,.js,.jsx --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

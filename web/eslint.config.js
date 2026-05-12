@@ -7,7 +7,15 @@ import tsParser from '@typescript-eslint/parser'
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'coverage/**',
+      'public/**',
+      '**/*.d.ts',
+      '**/*.config.js',
+      '**/*.config.ts',
+    ],
   },
   // TypeScript config first (lower priority)
   ...tseslint.configs.recommended,
@@ -21,7 +29,7 @@ export default [
       },
     },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
       'no-unused-vars': 'off',
     },
   },
@@ -52,7 +60,7 @@ export default [
     rules: {
       ...vuePlugin.configs['flat/essential'].rules,
       'vue/multi-word-component-names': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
       'no-unused-vars': 'off',
     },
   },
