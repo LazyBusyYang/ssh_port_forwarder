@@ -128,7 +128,7 @@
           </button>
         </div>
 
-        <form @submit.prevent="saveHost" class="p-6">
+        <form @submit.prevent="saveHost" class="p-6" novalidate>
           <!-- 全局表单错误 -->
           <div v-if="formError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
             <p class="text-sm text-red-600">{{ formError }}</p>
