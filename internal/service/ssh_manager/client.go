@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"ssh-port-forwarder/internal/model"
 	"golang.org/x/crypto/ssh"
+	"ssh-port-forwarder/internal/model"
 )
 
 // 连接状态机
@@ -186,12 +186,12 @@ func (c *SSHClient) keepAlive() {
 			// 发送 keepalive 请求
 			_, _, err := client.SendRequest("keepalive@openssh.com", true, nil)
 			if err != nil {
-				log.Printf("[SSHClient] KeepAlive failed for %s@%s:%d: %v", 
+				log.Printf("[SSHClient] KeepAlive failed for %s@%s:%d: %v",
 					c.host.Username, c.host.Host, c.host.Port, err)
-				
+
 				// 设置状态为重连中
 				c.SetState(ConnStateReconnecting)
-				
+
 				// 启动重连循环
 				go c.StartReconnectLoop()
 				return
