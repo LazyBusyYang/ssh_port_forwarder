@@ -211,7 +211,7 @@ func (c *SSHClient) stopForwardEntry(entry *ForwardEntry) {
 
 	entry.active = false
 	if entry.listener != nil {
-		_ = entry.listener.Close()
+		_ = entry.listener.Close() // ignore close error
 	}
 	close(entry.stopCh)
 }
@@ -235,7 +235,7 @@ func copyData(localConn, remoteConn net.Conn, stopCh chan struct{}) {
 				}
 			}
 		}
-		_ = remoteConn.Close()
+		_ = remoteConn.Close() // ignore close error
 	}()
 
 	// remote -> local
@@ -252,7 +252,7 @@ func copyData(localConn, remoteConn net.Conn, stopCh chan struct{}) {
 				}
 			}
 		}
-		_ = localConn.Close()
+		_ = localConn.Close() // ignore close error
 	}()
 
 	wg.Wait()

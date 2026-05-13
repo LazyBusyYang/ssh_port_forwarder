@@ -21,7 +21,7 @@ function parseStatusMessage(raw: string): WebSocketMessage | null {
   if (typeof t !== 'string') {
     return null
   }
-  return { type: t, data: 'data' in obj ? obj.data : undefined }
+  return { type: t, data: obj.data }
 }
 
 export function useStatusWebSocket() {

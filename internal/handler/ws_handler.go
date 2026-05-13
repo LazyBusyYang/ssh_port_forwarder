@@ -42,7 +42,9 @@ func (h *WSHandler) Status(c *gin.Context) {
 		log.Printf("[WS] Failed to upgrade connection: %v", err)
 		return
 	}
-	defer func() { _ = conn.Close() }()
+	defer func() {
+		_ = conn.Close() // ignore close error
+	}()
 
 	// 设置读取超时和 pong 处理
 	_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
