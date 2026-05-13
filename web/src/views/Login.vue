@@ -7,17 +7,15 @@
       <div class="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 p-8">
         <!-- 标题 -->
         <div class="text-center mb-8">
-          <div
-            class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-4 shadow-lg"
-          >
-            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-              />
-            </svg>
+          <div class="flex justify-center mb-4">
+            <img
+              src="/logo.svg"
+              alt=""
+              aria-hidden="true"
+              width="80"
+              height="80"
+              class="h-20 w-20 object-contain drop-shadow-lg rounded-xl"
+            />
           </div>
           <h1 class="text-2xl font-bold text-white">SSH Port Forwarder</h1>
           <p class="text-blue-200 mt-2 text-sm">请登录以继续访问</p>

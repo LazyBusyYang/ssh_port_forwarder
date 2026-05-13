@@ -25,14 +25,22 @@
         </svg>
       </button>
       <!-- Logo/标题 -->
-      <div class="h-16 flex items-center px-6 border-b border-gray-800 overflow-hidden">
+      <div
+        class="h-16 flex items-center gap-2 border-b border-gray-800 overflow-hidden px-2 md:px-6"
+      >
+        <img
+          src="/logo.svg"
+          alt=""
+          aria-hidden="true"
+          class="h-8 w-8 shrink-0 object-contain md:h-9 md:w-9"
+          width="32"
+          height="32"
+        />
         <h1
-          class="text-lg font-semibold text-white whitespace-nowrap"
-          :class="{ hidden: isMobile && !sidebarCollapsed }"
+          class="sr-only md:not-sr-only md:block text-lg font-semibold text-white truncate min-w-0"
         >
-          SSH Forwarder
+          SSH Port Forwarder
         </h1>
-        <h1 v-if="isMobile && sidebarCollapsed" class="text-lg font-semibold text-white">SF</h1>
       </div>
 
       <!-- 导航菜单 -->

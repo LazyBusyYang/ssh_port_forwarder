@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="web/public/logo.svg" alt="SSH Port Forwarder" width="160" />
+</p>
+
 # SSH Port Forwarder (SPF)
 
 SSH Port Forwarder 是一个基于 SSH 本地端口转发的负载均衡服务，用于将目标网络内的 TCP 服务通过 SSH 隧道安全地暴露到公网或可控网络环境中。
