@@ -1,0 +1,54 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">ssh_port_forwarder logo mark</title>
+  <desc id="desc">Vector recreation of a port-forwarding logo: three blue routing arrows passing through a dark gateway bracket.</desc>
+  <defs>
+    <linearGradient id="routeBlue" x1="160" y1="0" x2="880" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0E5BFF"/>
+      <stop offset="0.55" stop-color="#0B79FF"/>
+      <stop offset="1" stop-color="#11B9E8"/>
+    </linearGradient>
+    <linearGradient id="routeCyan" x1="160" y1="0" x2="880" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0E5BFF"/>
+      <stop offset="0.5" stop-color="#0A8CFF"/>
+      <stop offset="1" stop-color="#15C9D9"/>
+    </linearGradient>
+    <linearGradient id="routeMiddle" x1="160" y1="0" x2="880" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0D5BFF"/>
+      <stop offset="0.55" stop-color="#087DFF"/>
+      <stop offset="1" stop-color="#0EA8FF"/>
+    </linearGradient>
+    <linearGradient id="gateway" x1="400" y1="250" x2="690" y2="790" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#172132"/>
+      <stop offset="1" stop-color="#0D1522"/>
+    </linearGradient>
+    <filter id="softShadow" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0D1522" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#softShadow)">
+    <!-- Dark gateway / port bracket -->
+    <path d="M430 382V318C430 292.5 450.5 272 476 272H632C657.5 272 678 292.5 678 318V382" stroke="url(#gateway)" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M430 642V706C430 731.5 450.5 752 476 752H632C657.5 752 678 731.5 678 706V642" stroke="url(#gateway)" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M430 398V626" stroke="url(#gateway)" stroke-width="56" stroke-linecap="round"/>
+  </g>
+
+  <!-- Top route -->
+  <circle cx="200" cy="386" r="38" fill="#0E5BFF"/>
+  <path d="M200 386H538C596 386 608 386 635 386C682 386 681 334 728 308H820" stroke="url(#routeBlue)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M820 260L888 308L820 356V260Z" fill="#0EA8FF"/>
+
+  <!-- Middle route -->
+  <circle cx="200" cy="512" r="38" fill="#0E5BFF"/>
+  <path d="M200 512H832" stroke="url(#routeMiddle)" stroke-width="48" stroke-linecap="round"/>
+  <path d="M832 464L900 512L832 560V464Z" fill="#0EA8FF"/>
+
+  <!-- Bottom route -->
+  <circle cx="200" cy="638" r="38" fill="#0E5BFF"/>
+  <path d="M200 638H540C594 638 604 638 632 638C682 638 681 690 728 716H820" stroke="url(#routeCyan)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M820 668L888 716L820 764V668Z" fill="#15C9D9"/>
+
+  <!-- subtle overlaps where routes pass through the gateway -->
+  <rect x="411" y="362" width="72" height="72" rx="18" fill="#0B63F6" opacity="0.25"/>
+  <rect x="411" y="590" width="72" height="72" rx="18" fill="#0B63F6" opacity="0.2"/>
+</svg>
