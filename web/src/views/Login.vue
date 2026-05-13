@@ -10,7 +10,10 @@
           <div class="flex justify-center mb-4">
             <img
               src="/logo.svg"
-              alt="SSH Port Forwarder"
+              alt=""
+              aria-hidden="true"
+              width="80"
+              height="80"
               class="h-20 w-20 object-contain drop-shadow-lg rounded-xl"
             />
           </div>

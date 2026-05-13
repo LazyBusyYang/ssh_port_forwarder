@@ -31,12 +31,15 @@
         <img
           src="/logo.svg"
           alt=""
+          aria-hidden="true"
           class="h-8 w-8 shrink-0 object-contain md:h-9 md:w-9"
-          width="36"
-          height="36"
+          width="32"
+          height="32"
         />
-        <h1 class="hidden md:block text-lg font-semibold text-white truncate min-w-0">
-          SSH Forwarder
+        <h1
+          class="sr-only md:not-sr-only md:block text-lg font-semibold text-white truncate min-w-0"
+        >
+          SSH Port Forwarder
         </h1>
       </div>
 
