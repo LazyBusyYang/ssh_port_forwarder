@@ -1,9 +1,12 @@
-.PHONY: build run test clean build-frontend docker-build
+.PHONY: build run test clean build-frontend docker-build local-test-up local-test-down local-test-logs local-test-ps local-test-config local-test-clean
 
 # Go 参数
 BINARY_NAME=spf-server
 GO=go
 GOFLAGS=-ldflags="-s -w"
+DOCKER_COMPOSE ?= docker compose
+LOCAL_TEST_COMPOSE ?= docker-compose.local-test.yml
+LOCAL_TEST_PROJECT ?= spf-local-test
 
 # 默认目标
 all: build
@@ -41,6 +44,25 @@ clean:
 docker-build:
 	docker build -t ssh-port-forwarder:latest .
 
+# 本地 Docker 测试环境
+local-test-up:
+	$(DOCKER_COMPOSE) -f $(LOCAL_TEST_COMPOSE) -p $(LOCAL_TEST_PROJECT) up -d
+
+local-test-down:
+	$(DOCKER_COMPOSE) -f $(LOCAL_TEST_COMPOSE) -p $(LOCAL_TEST_PROJECT) down --remove-orphans
+
+local-test-logs:
+	$(DOCKER_COMPOSE) -f $(LOCAL_TEST_COMPOSE) -p $(LOCAL_TEST_PROJECT) logs -f
+
+local-test-ps:
+	$(DOCKER_COMPOSE) -f $(LOCAL_TEST_COMPOSE) -p $(LOCAL_TEST_PROJECT) ps
+
+local-test-config:
+	$(DOCKER_COMPOSE) -f $(LOCAL_TEST_COMPOSE) -p $(LOCAL_TEST_PROJECT) config
+
+local-test-clean:
+	$(DOCKER_COMPOSE) -f $(LOCAL_TEST_COMPOSE) -p $(LOCAL_TEST_PROJECT) down -v --remove-orphans
+
 # CI 相关目标
 lint-frontend:
 	cd web && npm run lint
@@ -71,6 +93,12 @@ help:
 	@echo "  vet                - Run go vet"
 	@echo "  clean              - Clean build artifacts"
 	@echo "  docker-build       - Build Docker image"
+	@echo "  local-test-up      - Start local Docker test stack"
+	@echo "  local-test-down    - Stop local Docker test stack (keep volumes)"
+	@echo "  local-test-logs    - Follow local Docker test stack logs"
+	@echo "  local-test-ps      - Show local Docker test stack status"
+	@echo "  local-test-config  - Render local Docker test stack compose config"
+	@echo "  local-test-clean   - Stop local Docker test stack and remove volumes"
 	@echo "  lint-frontend      - Run frontend lint and format check"
 	@echo "  lint-backend       - Run backend lint"
 	@echo "  test-sqlite-integration - Run SQLite integration tests"

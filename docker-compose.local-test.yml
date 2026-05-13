@@ -1,0 +1,98 @@
+# Traceable, easy-to-clean local test stack for ssh_port_forwarder.
+# All credentials and keys here are local-only fixtures; do not use them in production.
+name: spf-local-test
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: spf-local-test-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: spf_local_test_root
+      MYSQL_DATABASE: spf_local_test
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pspf_local_test_root"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    image: golang:1.25-alpine
+    container_name: spf-local-test-backend
+    working_dir: /workspace
+    command: sh -c "go run ./cmd/server/ -config /tmp/spf-local-test-no-file.yaml"
+    environment:
+      # Config falls back to defaults plus these env overrides because the config path is intentionally absent.
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8080
+      SERVER_ENV: development
+      DATABASE_TYPE: mysql
+      SPF_DB_DSN: root:spf_local_test_root@tcp(mysql:3306)/spf_local_test?charset=utf8mb4&parseTime=true&loc=Local
+      JWT_SECRET_CURRENT: local-test-jwt-secret-not-for-production
+      SPF_ENCRYPTION_KEY: MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=
+      SPF_DEFAULT_ADMIN_USER: admin
+      SPF_DEFAULT_ADMIN_PASS: admin123
+    ports:
+      - "8080:8080"
+      # Frontend shares the backend network namespace so Vite's localhost:8080 proxy works unchanged.
+      - "5173:5173"
+    volumes:
+      - .:/workspace
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    image: node:22-alpine
+    container_name: spf-local-test-frontend
+    working_dir: /workspace/web
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./web:/workspace/web
+      - web-node-modules:/workspace/web/node_modules
+    network_mode: "service:backend"
+    depends_on:
+      backend:
+        condition: service_started
+
+  ssh-password:
+    image: lscr.io/linuxserver/openssh-server:latest
+    container_name: spf-local-test-ssh-password
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Asia/Shanghai
+      PASSWORD_ACCESS: "true"
+      USER_NAME: testuser
+      USER_PASSWORD: testpass123
+    ports:
+      - "2222:2222"
+    volumes:
+      - ssh-password-config:/config
+
+  ssh-key:
+    image: lscr.io/linuxserver/openssh-server:latest
+    container_name: spf-local-test-ssh-key
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Asia/Shanghai
+      USER_NAME: keyuser
+      PUBLIC_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHdOtIbc4G8PIRvJ/4hdsyc+gVftBS+01nNw71Q66z5K spf-local-test-key-not-for-production
+    ports:
+      - "2223:2222"
+    volumes:
+      - ssh-key-config:/config
+
+volumes:
+  mysql-data:
+  go-mod-cache:
+  go-build-cache:
+  web-node-modules:
+  ssh-password-config:
+  ssh-key-config:
