@@ -539,9 +539,29 @@ ssh-port-forwarder/
 
 ### 运行测试
 
+默认仅运行**单元测试**（`make test` 等价于不带 `integration` 构建标签的 `go test`）：
+
 ```bash
 make test
 ```
+
+#### 集成测试（build tag 与环境变量）
+
+集成测试源文件带有 `//go:build integration`，**不会**被普通的 `go test ./...` / `make test` 编译或执行。必须通过 **`-tags=integration`** 参与构建，且依赖环境变量；**未设置变量时测试会 `t.Skip`，退出码仍为 0**，容易误以为是「已跑过」而实际未覆盖数据库路径。
+
+| 场景 | 要求 |
+|------|------|
+| SQLite 集成 | 设置 `TEST_DB_PATH`（数据库文件路径），并带 `-tags=integration`；测试名匹配 `SQLite`。 |
+| MySQL 集成 | 设置 `TEST_MYSQL_DSN`（GORM DSN），并带 `-tags=integration`；测试名匹配 `MySQL`。 |
+
+推荐与 CI 一致，使用脚本（会自动设置变量并传入 `-tags=integration`）：
+
+```bash
+make test-sqlite-integration   # 临时目录 + TEST_DB_PATH
+make test-mysql-integration    # 本地用 Docker 起 MySQL:3307；CI 中由 workflow 提供 MySQL 并设 CI=true
+```
+
+**本地注意**：MySQL 脚本在非 CI 下依赖 Docker；仅执行 `go test -tags=integration ./...` 而不导出上述变量时，相关用例会全部 Skip。
 
 ### 代码检查
 
