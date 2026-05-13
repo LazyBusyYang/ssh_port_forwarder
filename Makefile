@@ -41,14 +41,38 @@ clean:
 docker-build:
 	docker build -t ssh-port-forwarder:latest .
 
+# CI 相关目标
+lint-frontend:
+	cd web && npm run lint
+	cd web && npm run format:check
+
+lint-backend:
+	gofmt -d .
+	go vet ./...
+	golangci-lint run
+
+test-sqlite-integration:
+	@bash scripts/test-sqlite.sh
+
+test-mysql-integration:
+	@bash scripts/test-mysql.sh
+
+ci: lint-frontend lint-backend test test-sqlite-integration test-mysql-integration
+	@echo "All CI checks passed!"
+
 # 帮助
 help:
 	@echo "Available targets:"
-	@echo "  build           - Build frontend and backend"
-	@echo "  build-frontend  - Build frontend only"
-	@echo "  build-backend   - Build backend only (frontend must be built)"
-	@echo "  run             - Run the server"
-	@echo "  test            - Run all tests"
-	@echo "  vet             - Run go vet"
-	@echo "  clean           - Clean build artifacts"
-	@echo "  docker-build    - Build Docker image"
+	@echo "  build              - Build frontend and backend"
+	@echo "  build-frontend     - Build frontend only"
+	@echo "  build-backend      - Build backend only (frontend must be built)"
+	@echo "  run                - Run the server"
+	@echo "  test               - Run all tests"
+	@echo "  vet                - Run go vet"
+	@echo "  clean              - Clean build artifacts"
+	@echo "  docker-build       - Build Docker image"
+	@echo "  lint-frontend      - Run frontend lint and format check"
+	@echo "  lint-backend       - Run backend lint"
+	@echo "  test-sqlite-integration - Run SQLite integration tests"
+	@echo "  test-mysql-integration  - Run MySQL integration tests"
+	@echo "  ci                 - Run all CI checks"

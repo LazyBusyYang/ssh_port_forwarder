@@ -3,7 +3,25 @@ import { useAuthStore } from '../stores/auth'
 
 export interface WebSocketMessage {
   type: string
-  data: any
+  data: unknown
+}
+
+function parseStatusMessage(raw: string): WebSocketMessage | null {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return null
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    return null
+  }
+  const obj = parsed as Record<string, unknown>
+  const t = obj.type
+  if (typeof t !== 'string') {
+    return null
+  }
+  return { type: t, data: obj.data }
 }
 
 export function useStatusWebSocket() {
@@ -11,53 +29,53 @@ export function useStatusWebSocket() {
   const connected = ref(false)
   let ws: WebSocket | null = null
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-  
+
   const connect = () => {
     // 清除之前的重连定时器
     if (reconnectTimer) {
       clearTimeout(reconnectTimer)
       reconnectTimer = null
     }
-    
+
     const authStore = useAuthStore()
     if (!authStore.token) {
       console.warn('No token available for WebSocket connection')
       return
     }
-    
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const wsUrl = `${protocol}//${window.location.host}/api/v1/ws/status?token=${authStore.token}`
-    
+
     try {
       ws = new WebSocket(wsUrl)
-      
+
       ws.onopen = () => {
         console.log('WebSocket connected')
         connected.value = true
       }
-      
-      ws.onclose = (event) => {
+
+      ws.onclose = event => {
         console.log('WebSocket closed:', event.code, event.reason)
         connected.value = false
         ws = null
         // 5秒后重连
         reconnectTimer = setTimeout(connect, 5000)
       }
-      
-      ws.onerror = (error) => {
+
+      ws.onerror = error => {
         console.error('WebSocket error:', error)
       }
-      
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data) as WebSocketMessage
-          messages.value.push(data)
-          // 保留最近 100 条
-          if (messages.value.length > 100) {
-            messages.value = messages.value.slice(-100)
-          }
-        } catch (err) {
-          console.error('Failed to parse WebSocket message:', err)
+
+      ws.onmessage = event => {
+        const msg = parseStatusMessage(event.data)
+        if (!msg) {
+          console.error('Failed to parse WebSocket message:', event.data)
+          return
+        }
+        messages.value.push(msg)
+        // 保留最近 100 条
+        if (messages.value.length > 100) {
+          messages.value = messages.value.slice(-100)
         }
       }
     } catch (error) {
@@ -66,7 +84,7 @@ export function useStatusWebSocket() {
       reconnectTimer = setTimeout(connect, 5000)
     }
   }
-  
+
   const disconnect = () => {
     if (reconnectTimer) {
       clearTimeout(reconnectTimer)
@@ -80,30 +98,30 @@ export function useStatusWebSocket() {
     }
     connected.value = false
   }
-  
-  const send = (data: any) => {
+
+  const send = (data: Record<string, unknown>) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(data))
     } else {
       console.warn('WebSocket is not connected')
     }
   }
-  
+
   // 自动连接
   onMounted(() => {
     connect()
   })
-  
+
   // 清理
   onUnmounted(() => {
     disconnect()
   })
-  
-  return { 
-    messages, 
-    connected, 
-    connect, 
+
+  return {
+    messages,
+    connected,
+    connect,
     disconnect,
-    send
+    send,
   }
 }

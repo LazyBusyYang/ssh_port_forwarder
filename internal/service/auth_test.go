@@ -256,7 +256,7 @@ func TestLogin(t *testing.T) {
 		PasswordHash: passwordHash,
 		Role:         "admin",
 	}
-	mockRepo.Create(testUser)
+	_ = mockRepo.Create(testUser)
 
 	// 测试正确登录
 	tokenPair, err := service.Login("testuser", password)
@@ -315,7 +315,7 @@ func TestRefreshToken(t *testing.T) {
 		PasswordHash: passwordHash,
 		Role:         "operator",
 	}
-	mockRepo.Create(testUser)
+	_ = mockRepo.Create(testUser)
 
 	// 先生成 TokenPair
 	tokenPair, err := service.GenerateTokenPair(testUser)

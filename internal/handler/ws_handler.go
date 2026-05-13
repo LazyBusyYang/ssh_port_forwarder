@@ -42,12 +42,14 @@ func (h *WSHandler) Status(c *gin.Context) {
 		log.Printf("[WS] Failed to upgrade connection: %v", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close() // ignore close error
+	}()
 
 	// 设置读取超时和 pong 处理
-	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	conn.SetPongHandler(func(string) error {
-		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		return nil
 	})
 
@@ -128,5 +130,5 @@ func (h *WSHandler) sendCloseMessage(conn *websocket.Conn) {
 	}
 
 	data, _ := json.Marshal(msg)
-	conn.WriteMessage(websocket.CloseMessage, data)
+	_ = conn.WriteMessage(websocket.CloseMessage, data)
 }

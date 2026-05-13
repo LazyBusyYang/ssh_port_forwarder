@@ -41,7 +41,12 @@
           @click="fetchAuditLogs"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
           </svg>
           刷新
         </button>
@@ -59,12 +64,36 @@
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target Type</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target ID</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detail</th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Time
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                User
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Action
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Target Type
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Target ID
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Detail
+              </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
@@ -75,7 +104,9 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 <div class="flex items-center gap-2">
                   <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span class="text-xs font-medium text-blue-600">{{ getUserInitial(log.username) }}</span>
+                    <span class="text-xs font-medium text-blue-600">{{
+                      getUserInitial(log.username)
+                    }}</span>
                   </div>
                   <span>{{ log.username || `User #${log.user_id}` }}</span>
                 </div>
@@ -84,7 +115,7 @@
                 <span
                   :class="[
                     'px-2 py-1 text-xs font-medium rounded-full',
-                    getActionClass(log.action)
+                    getActionClass(log.action),
                   ]"
                 >
                   {{ log.action }}
@@ -109,9 +140,9 @@
       <!-- 分页 -->
       <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
         <div class="text-sm text-gray-500">
-          显示第 {{ (pagination.page - 1) * pagination.page_size + 1 }} 到 
-          {{ Math.min(pagination.page * pagination.page_size, pagination.total) }} 条，
-          共 {{ pagination.total }} 条
+          显示第 {{ (pagination.page - 1) * pagination.page_size + 1 }} 到
+          {{ Math.min(pagination.page * pagination.page_size, pagination.total) }} 条， 共
+          {{ pagination.total }} 条
         </div>
         <div class="flex items-center gap-2">
           <button
@@ -120,7 +151,7 @@
               'px-3 py-1 text-sm font-medium rounded-md',
               pagination.page <= 1
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50',
             ]"
             @click="goToPage(pagination.page - 1)"
           >
@@ -135,7 +166,7 @@
               'px-3 py-1 text-sm font-medium rounded-md',
               pagination.page >= totalPages
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50',
             ]"
             @click="goToPage(pagination.page + 1)"
           >
@@ -146,9 +177,22 @@
     </div>
 
     <!-- 空状态 -->
-    <div v-if="!loading && auditLogs.length === 0" class="bg-white rounded-lg shadow p-12 text-center">
-      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <div
+      v-if="!loading && auditLogs.length === 0"
+      class="bg-white rounded-lg shadow p-12 text-center"
+    >
+      <svg
+        class="mx-auto h-12 w-12 text-gray-400"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
       </svg>
       <h3 class="mt-4 text-lg font-medium text-gray-900">暂无审计日志</h3>
       <p class="mt-1 text-sm text-gray-500">没有找到符合条件的审计记录</p>
@@ -181,13 +225,13 @@ const auditLogs = ref<AuditLog[]>([])
 const loading = ref(false)
 const filters = ref({
   action: '',
-  user_id: ''
+  user_id: '',
 })
 
 const pagination = ref<Pagination>({
   page: 1,
   page_size: 20,
-  total: 0
+  total: 0,
 })
 
 const actionTypes = [
@@ -201,7 +245,7 @@ const actionTypes = [
   'UPDATE_RULE',
   'DELETE_RULE',
   'LOGIN',
-  'LOGOUT'
+  'LOGOUT',
 ]
 
 const totalPages = computed(() => {
@@ -217,19 +261,19 @@ async function fetchAuditLogs() {
   try {
     const params = new URLSearchParams({
       page: String(pagination.value.page),
-      page_size: String(pagination.value.page_size)
+      page_size: String(pagination.value.page_size),
     })
-    
+
     if (filters.value.action) {
       params.append('action', filters.value.action)
     }
     if (filters.value.user_id) {
       params.append('user_id', filters.value.user_id)
     }
-    
+
     const res = await api.get(`/audit-logs?${params.toString()}`)
     const data = res.data
-    
+
     auditLogs.value = data.data || []
     pagination.value.total = data.total || 0
     pagination.value.page = data.page || 1
@@ -261,7 +305,7 @@ function formatDateTime(timestamp: number): string {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit'
+    second: '2-digit',
   })
 }
 
@@ -272,17 +316,17 @@ function getUserInitial(username: string): string {
 
 function getActionClass(action: string): string {
   const actionClassMap: Record<string, string> = {
-    'CREATE_HOST': 'bg-green-100 text-green-800',
-    'UPDATE_HOST': 'bg-blue-100 text-blue-800',
-    'DELETE_HOST': 'bg-red-100 text-red-800',
-    'CREATE_GROUP': 'bg-green-100 text-green-800',
-    'UPDATE_GROUP': 'bg-blue-100 text-blue-800',
-    'DELETE_GROUP': 'bg-red-100 text-red-800',
-    'CREATE_RULE': 'bg-green-100 text-green-800',
-    'UPDATE_RULE': 'bg-blue-100 text-blue-800',
-    'DELETE_RULE': 'bg-red-100 text-red-800',
-    'LOGIN': 'bg-purple-100 text-purple-800',
-    'LOGOUT': 'bg-gray-100 text-gray-800'
+    CREATE_HOST: 'bg-green-100 text-green-800',
+    UPDATE_HOST: 'bg-blue-100 text-blue-800',
+    DELETE_HOST: 'bg-red-100 text-red-800',
+    CREATE_GROUP: 'bg-green-100 text-green-800',
+    UPDATE_GROUP: 'bg-blue-100 text-blue-800',
+    DELETE_GROUP: 'bg-red-100 text-red-800',
+    CREATE_RULE: 'bg-green-100 text-green-800',
+    UPDATE_RULE: 'bg-blue-100 text-blue-800',
+    DELETE_RULE: 'bg-red-100 text-red-800',
+    LOGIN: 'bg-purple-100 text-purple-800',
+    LOGOUT: 'bg-gray-100 text-gray-800',
   }
   return actionClassMap[action] || 'bg-gray-100 text-gray-800'
 }

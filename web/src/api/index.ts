@@ -8,7 +8,7 @@ const api = axios.create({
 })
 
 // 请求拦截器：注入 Token
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(config => {
   const authStore = useAuthStore()
   if (authStore.token) {
     config.headers.Authorization = `Bearer ${authStore.token}`
@@ -18,8 +18,8 @@ api.interceptors.request.use((config) => {
 
 // 响应拦截器：401 自动跳转登录
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  response => response,
+  error => {
     if (error.response?.status === 401) {
       const authStore = useAuthStore()
       authStore.logout()

@@ -19,7 +19,7 @@ const (
 // 通过 stopCh 可取消
 func (c *SSHClient) StartReconnectLoop() {
 	c.mu.Lock()
-	
+
 	// 如果已经在重连中，避免重复启动
 	if c.state == ConnStateReconnecting {
 		c.mu.Unlock()
@@ -27,7 +27,7 @@ func (c *SSHClient) StartReconnectLoop() {
 			c.host.Username, c.host.Host, c.host.Port)
 		return
 	}
-	
+
 	c.state = ConnStateReconnecting
 	c.mu.Unlock()
 
@@ -47,7 +47,7 @@ func (c *SSHClient) StartReconnectLoop() {
 	// 关闭现有 SSH 连接
 	c.mu.Lock()
 	if c.client != nil {
-		c.client.Close()
+		_ = c.client.Close() // ignore close error
 		c.client = nil
 	}
 	c.mu.Unlock()

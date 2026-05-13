@@ -142,22 +142,22 @@ func (h *StatusHandler) Rules(c *gin.Context) {
 	}
 
 	type RuleStatus struct {
-		ID              uint64 `json:"id"`
-		Name            string `json:"name"`
-		GroupID         uint64 `json:"group_id"`
-		LocalPort       int    `json:"local_port"`
-		TargetHost      string `json:"target_host"`
-		TargetPort      int    `json:"target_port"`
-		Protocol        string `json:"protocol"`
-		Status          string `json:"status"`
+		ID              uint64  `json:"id"`
+		Name            string  `json:"name"`
+		GroupID         uint64  `json:"group_id"`
+		LocalPort       int     `json:"local_port"`
+		TargetHost      string  `json:"target_host"`
+		TargetPort      int     `json:"target_port"`
+		Protocol        string  `json:"protocol"`
+		Status          string  `json:"status"`
 		ActiveHostID    *uint64 `json:"active_host_id,omitempty"`
-		ActiveHostName  string `json:"active_host_name"`
-		HealthStatus    string `json:"health_status"`
-		LocalReachable  bool   `json:"local_reachable"`
-		EndToEndOK      bool   `json:"end_to_end_ok"`
-		FallbackUsed    bool   `json:"fallback_used"`
-		HealthReason    string `json:"health_reason,omitempty"`
-		HealthCheckedAt int64  `json:"health_checked_at,omitempty"`
+		ActiveHostName  string  `json:"active_host_name"`
+		HealthStatus    string  `json:"health_status"`
+		LocalReachable  bool    `json:"local_reachable"`
+		EndToEndOK      bool    `json:"end_to_end_ok"`
+		FallbackUsed    bool    `json:"fallback_used"`
+		HealthReason    string  `json:"health_reason,omitempty"`
+		HealthCheckedAt int64   `json:"health_checked_at,omitempty"`
 	}
 
 	ruleHealthMap := h.container.HealthChecker.GetRuleHealthSnapshot()

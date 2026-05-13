@@ -34,7 +34,7 @@
                 'px-3 py-2 text-sm font-medium border',
                 selectedTimeRange === range.value
                   ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
               ]"
               @click="setTimeRange(range.value)"
             >
@@ -77,11 +77,7 @@
       <div class="bg-white rounded-lg shadow p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">健康度分数趋势</h2>
         <div class="h-80">
-          <SimpleChart
-            :data="scoreData"
-            line-color="#3b82f6"
-            :threshold="60"
-          />
+          <SimpleChart :data="scoreData" line-color="#3b82f6" :threshold="60" />
         </div>
         <div class="mt-4 flex items-center gap-4 text-sm">
           <div class="flex items-center gap-2">
@@ -89,7 +85,10 @@
             <span class="text-gray-600">健康度分数</span>
           </div>
           <div class="flex items-center gap-2">
-            <div class="w-4 h-0.5 bg-red-500 border-dashed" style="border-top: 2px dashed #ef4444;"></div>
+            <div
+              class="w-4 h-0.5 bg-red-500 border-dashed"
+              style="border-top: 2px dashed #ef4444"
+            ></div>
             <span class="text-gray-600">阈值 (60分)</span>
           </div>
         </div>
@@ -99,10 +98,7 @@
       <div class="bg-white rounded-lg shadow p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">检测延迟趋势 (ms)</h2>
         <div class="h-80">
-          <SimpleChart
-            :data="latencyData"
-            line-color="#10b981"
-          />
+          <SimpleChart :data="latencyData" line-color="#10b981" />
         </div>
         <div class="mt-4 flex items-center gap-4 text-sm">
           <div class="flex items-center gap-2">
@@ -121,10 +117,26 @@
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Healthy</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Latency (ms)</th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Time
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Score
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Healthy
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Latency (ms)
+                </th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -134,10 +146,7 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                   <span
-                    :class="[
-                      'font-medium',
-                      item.score >= 60 ? 'text-green-600' : 'text-red-600'
-                    ]"
+                    :class="['font-medium', item.score >= 60 ? 'text-green-600' : 'text-red-600']"
                   >
                     {{ item.score.toFixed(1) }}
                   </span>
@@ -146,9 +155,7 @@
                   <span
                     :class="[
                       'px-2 py-1 text-xs font-medium rounded-full',
-                      item.is_healthy
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
+                      item.is_healthy ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800',
                     ]"
                   >
                     {{ item.is_healthy ? 'Healthy' : 'Unhealthy' }}
@@ -166,8 +173,18 @@
 
     <!-- 空状态 -->
     <div v-else-if="selectedHostId" class="bg-white rounded-lg shadow p-12 text-center">
-      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      <svg
+        class="mx-auto h-12 w-12 text-gray-400"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+        />
       </svg>
       <h3 class="mt-4 text-lg font-medium text-gray-900">暂无数据</h3>
       <p class="mt-1 text-sm text-gray-500">该时间段内没有健康度检测记录</p>
@@ -175,8 +192,18 @@
 
     <!-- 未选择 Host -->
     <div v-else class="bg-white rounded-lg shadow p-12 text-center">
-      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+      <svg
+        class="mx-auto h-12 w-12 text-gray-400"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"
+        />
       </svg>
       <h3 class="mt-4 text-lg font-medium text-gray-900">请选择 SSH Host</h3>
       <p class="mt-1 text-sm text-gray-500">从上方下拉菜单选择一个 Host 查看健康度历史</p>
@@ -225,14 +252,14 @@ const customEnd = ref('')
 const scoreData = computed(() => {
   return healthData.value.map(item => ({
     x: item.checked_at,
-    y: item.score
+    y: item.score,
   }))
 })
 
 const latencyData = computed(() => {
   return healthData.value.map(item => ({
     x: item.checked_at,
-    y: item.latency_ms
+    y: item.latency_ms,
   }))
 })
 
@@ -252,11 +279,11 @@ async function fetchHosts() {
 
 function setTimeRange(range: string) {
   selectedTimeRange.value = range
-  
+
   if (range !== 'custom') {
     const now = Math.floor(Date.now() / 1000)
     let start: number
-    
+
     switch (range) {
       case '1h':
         start = now - 3600
@@ -273,10 +300,10 @@ function setTimeRange(range: string) {
       default:
         start = now - 3600 * 24
     }
-    
+
     customStart.value = formatDateTimeLocal(start)
     customEnd.value = formatDateTimeLocal(now)
-    
+
     if (selectedHostId.value) {
       fetchHealthHistory()
     }
@@ -285,13 +312,15 @@ function setTimeRange(range: string) {
 
 async function fetchHealthHistory() {
   if (!selectedHostId.value) return
-  
+
   loading.value = true
   try {
     const start = Math.floor(new Date(customStart.value).getTime() / 1000)
     const end = Math.floor(new Date(customEnd.value).getTime() / 1000)
-    
-    const res = await api.get(`/health-history/${selectedHostId.value}?start=${start}&end=${end}&limit=100`)
+
+    const res = await api.get(
+      `/health-history/${selectedHostId.value}?start=${start}&end=${end}&limit=100`
+    )
     healthData.value = res.data.data || []
   } catch (error) {
     console.error('Failed to fetch health history:', error)
@@ -309,7 +338,7 @@ function formatDateTime(timestamp: number): string {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit'
+    second: '2-digit',
   })
 }
 

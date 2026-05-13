@@ -5,21 +5,21 @@ import (
 	"log"
 	"sync"
 
+	"golang.org/x/crypto/ssh"
 	"ssh-port-forwarder/internal/config"
 	"ssh-port-forwarder/internal/model"
 	"ssh-port-forwarder/internal/pkg/crypto"
 	"ssh-port-forwarder/internal/repository"
-	"golang.org/x/crypto/ssh"
 )
 
 // Manager 管理所有 SSH 连接
 type Manager struct {
-	mu       sync.RWMutex
-	clients  map[uint64]*SSHClient // hostID -> SSHClient
-	hostRepo repository.SSHHostRepository
-	ruleRepo repository.ForwardRuleRepository
+	mu        sync.RWMutex
+	clients   map[uint64]*SSHClient // hostID -> SSHClient
+	hostRepo  repository.SSHHostRepository
+	ruleRepo  repository.ForwardRuleRepository
 	encConfig config.EncryptionConfig
-	stopCh   chan struct{}
+	stopCh    chan struct{}
 }
 
 // NewManager 创建新的 Manager 实例
@@ -40,7 +40,7 @@ func NewManager(
 // Start 启动管理器
 func (m *Manager) Start() error {
 	log.Printf("[SSHManager] Starting...")
-	
+
 	// 加载所有活跃的转发规则并启动
 	rules, err := m.ruleRepo.ListActive()
 	if err != nil {
