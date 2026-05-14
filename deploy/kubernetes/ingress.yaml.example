@@ -1,0 +1,26 @@
+# 示例 Ingress：复制为 ingress.yaml 并按集群 Ingress Class、域名与 TLS 修改后再 apply。
+# 未安装 Ingress Controller 时不要应用本文件。
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spf-server
+  namespace: spf
+  annotations:
+    # kubernetes.io/ingress.class: nginx
+spec:
+  ingressClassName: replace-with-your-ingress-class
+  rules:
+    - host: spf.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spf-server
+                port:
+                  number: 8080
+  # tls:
+  #   - hosts:
+  #       - spf.example.com
+  #     secretName: spf-tls

@@ -1,0 +1,85 @@
+name: Docker manual (dev / sha-*)
+
+on:
+  workflow_dispatch:
+    inputs:
+      git_ref:
+        description: 'Git ref to build (branch, tag, or SHA). Leading/trailing whitespace is stripped; all-whitespace falls back to "Use workflow from" HEAD. Leave empty for same.'
+        required: false
+        default: ''
+      image_tag:
+        description: 'Docker Hub image tag: dev or sha-* (e.g. sha-abc1234)'
+        required: true
+        default: 'dev'
+
+env:
+  IMAGE_NAME: dockersenseyang/ssh_port_forwarder
+
+jobs:
+  push:
+    name: Build and push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Resolve checkout ref
+        id: resolve_ref
+        env:
+          GIT_REF_INPUT: ${{ inputs.git_ref }}
+        run: |
+          set -euo pipefail
+          t="${GIT_REF_INPUT#"${GIT_REF_INPUT%%[![:space:]]*}"}"
+          t="${t%"${t##*[![:space:]]}"}"
+          if [ -z "$t" ]; then
+            out="${GITHUB_SHA}"
+          else
+            out="$t"
+          fi
+          {
+            echo 'ref<<__REF_OUT__'
+            printf '%s\n' "$out"
+            echo '__REF_OUT__'
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve_ref.outputs.ref }}
+
+      - name: Show resolved revision
+        run: |
+          set -euo pipefail
+          echo "Checkout ref (after trim / fallback): ${{ steps.resolve_ref.outputs.ref }}"
+          echo "Resolved HEAD: $(git rev-parse HEAD)"
+          git log -1 --oneline
+
+      - name: Validate image tag
+        env:
+          TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          if [[ "${TAG}" == "dev" ]]; then
+            exit 0
+          fi
+          if [[ "${TAG}" =~ ^sha-[A-Za-z0-9._-]+$ ]]; then
+            exit 0
+          fi
+          echo "image_tag must be exactly \"dev\" or match ^sha-[A-Za-z0-9._-]+$ (got: ${TAG})" >&2
+          exit 1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}
+          provenance: false
