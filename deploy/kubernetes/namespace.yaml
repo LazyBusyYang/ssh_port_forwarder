@@ -1,0 +1,7 @@
+# 与 deployment / service 使用同一命名空间；可按集群规范改名。
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: spf
+  labels:
+    app.kubernetes.io/name: ssh-port-forwarder

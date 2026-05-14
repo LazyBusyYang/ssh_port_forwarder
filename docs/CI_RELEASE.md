@@ -33,6 +33,8 @@ GitLab CI 若复用同一仓库，可设置环境变量 **`CI_COMMIT_TAG`**（�
 
 **不**在自动流水线中创建或更新 **`latest`**；`latest` 由维护者单独处理（与 semver tag 解耦）。
 
+**审阅说明（`:latest` 与示例清单）**：根目录 [`docker-compose.yml`](../docker-compose.yml) 中镜像 tag 通过环境变量 **`SPF_IMAGE_TAG`** 引用（未设置时默认 `latest`），[`deploy/kubernetes/deployment.yaml`](../deploy/kubernetes/deployment.yaml) 中镜像 tag 与 **`VERSION`** 对齐的 semver，均为**有意设计**：Compose 侧保留「未设置 `.env` 时仍可尝试拉 tag」的快捷默认值，而 CI 仍**只**自动推送 semver；二者并不矛盾。若 reviewer 或用户误以为「仓库应自动更新 `latest`」，请以本节为准——**不会**在 CI 中推送 `latest`。
+
 ### 触发条件（双路径，与 ZoeGate 对齐）
 
 1. **推送 Git tag `v*`**（排除无意义的 `vdev` 特例）：例如推送 `v1.0.0` 且 `VERSION` 文件内容为 `1.0.0`，且 CI 全绿 → 推 `dockersenseyang/ssh_port_forwarder:1.0.0`。

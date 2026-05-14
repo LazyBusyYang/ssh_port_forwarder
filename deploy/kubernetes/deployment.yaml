@@ -1,7 +1,10 @@
+# 镜像 tag：与根目录 VERSION 对齐的 semver 由 CI 推送；自动流水线不更新 :latest（见 docs/CI_RELEASE.md）。
+# 若需 latest，请自行在 Docker Hub 打标签或改此处 image。
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: spf-server
+  namespace: spf
   labels:
     app: spf-server
 spec:
@@ -16,11 +19,27 @@ spec:
     spec:
       containers:
         - name: spf-server
-          image: dockersenseyang/ssh_port_forwarder:latest
+          image: dockersenseyang/ssh_port_forwarder:1.2.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           env:
             - name: DATABASE_TYPE
               value: "mysql"

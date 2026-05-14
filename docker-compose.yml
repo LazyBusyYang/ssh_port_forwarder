@@ -1,4 +1,6 @@
 # 本地/演示：MySQL + 官方镜像（单进程内嵌前端与 API）。生产请改密钥、收紧端口暴露并配合反向代理 TLS。
+# 镜像 tag：CI 仅自动推送与根目录 VERSION 一致的 semver，不更新 :latest（见 docs/CI_RELEASE.md）。
+# 请在 .env 中设置 SPF_IMAGE_TAG（建议与 VERSION 一致）；未设置时默认 latest 仅为本地快捷写法。
 name: ssh-port-forwarder
 
 services:
@@ -21,7 +23,7 @@ services:
     restart: unless-stopped
 
   spf:
-    image: dockersenseyang/ssh_port_forwarder:latest
+    image: dockersenseyang/ssh_port_forwarder:${SPF_IMAGE_TAG:-latest}
     container_name: spf-server
     env_file: .env
     environment:

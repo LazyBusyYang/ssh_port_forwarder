@@ -43,7 +43,7 @@ docker build \
 
 ## Docker Compose（MySQL + 应用）
 
-1. `cp .env.example .env`，编辑 `.env`：`MYSQL_ROOT_PASSWORD` 与 `SPF_DB_DSN` 中的用户名、密码、库名保持一致；设置强随机 `JWT_SECRET_CURRENT` 与 `SPF_ENCRYPTION_KEY`（可用 `openssl rand -base64 32`）。
+1. `cp .env.example .env`，编辑 `.env`：`MYSQL_ROOT_PASSWORD` 与 `SPF_DB_DSN` 中的用户名、密码、库名保持一致；设置强随机 `JWT_SECRET_CURRENT` 与 `SPF_ENCRYPTION_KEY`（可用 `openssl rand -base64 32`）；将 **`SPF_IMAGE_TAG`** 设为与 Docker Hub 上已存在的 semver（建议与根目录 `VERSION` 一致）。未设置时 Compose 仍可能尝试拉取 `:latest`，而 **CI 不自动更新 `latest`**，易导致镜像过旧或不存在，详见 [CI_RELEASE.md](./CI_RELEASE.md)。
 2. 启动：`docker compose up -d`（在项目根目录，默认读取 `docker-compose.yml` 与 `.env`）。
 3. 浏览器访问：**本机** <http://localhost:8080>；**局域网** <http://\<本机局域网 IP\>:8080>（需防火墙放行 `8080`）。
 
@@ -66,16 +66,18 @@ MySQL 对宿主机暴露 `3306` 便于本地客户端调试；若不需要，可
 创建 Secret（键名需与 Deployment 中 `secretKeyRef` 一致）：
 
 ```bash
+kubectl apply -f deploy/kubernetes/namespace.yaml
 kubectl create secret generic spf-secrets \
+  -n spf \
   --from-literal=db-dsn='user:pass@tcp(mysql.default.svc.cluster.local:3306)/spf?charset=utf8mb4&parseTime=true&loc=Local' \
   --from-literal=jwt-secret='your-jwt-secret' \
   --from-literal=encryption-key='your-base64-key'
 ```
 
-部署：
+部署（Deployment / Service 使用 **`spf`** 命名空间；`deployment.yaml` 内镜像 tag 与根目录 `VERSION` 一致，发版后请按需改为目标 semver）：
 
 ```bash
-kubectl apply -f deploy/kubernetes/deployment.yaml -f deploy/kubernetes/service.yaml
+kubectl apply -f deploy/kubernetes/namespace.yaml -f deploy/kubernetes/deployment.yaml -f deploy/kubernetes/service.yaml
 ```
 
 按需应用 `ingress.yaml.example`（复制为正式清单并修改 host/TLS 后再 `kubectl apply`）。

@@ -40,16 +40,8 @@ COPY . .
 COPY --from=frontend-builder /app/web/dist ./web/dist
 RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o spf-server ./cmd/server/
 
-# Stage 3: Final image
+# Stage 3: Final image（不在此阶段声明/导出 HTTP(S)_PROXY：避免代理 URL 含凭证时被烘焙进公开镜像，并避免运行时出向流量误走代理）
 FROM alpine:3.19
-ARG HTTP_PROXY
-ARG HTTPS_PROXY
-ARG ALL_PROXY
-ARG NO_PROXY
-ENV HTTP_PROXY=$HTTP_PROXY \
-    HTTPS_PROXY=$HTTPS_PROXY \
-    ALL_PROXY=$ALL_PROXY \
-    NO_PROXY=$NO_PROXY
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 COPY --from=backend-builder /app/spf-server .

@@ -101,7 +101,8 @@ services:
       DATABASE_TYPE: mysql
       SPF_DB_DSN: root:spf_local_test_root@tcp(mysql:3306)/spf_local_test?charset=utf8mb4&parseTime=true&loc=Local
       JWT_SECRET_CURRENT: local-test-jwt-secret-not-for-production
-      SPF_ENCRYPTION_KEY: MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=
+      # 以下为文档示例随机密钥（勿用于生产）；亦可自行 openssl rand -base64 32
+      SPF_ENCRYPTION_KEY: VO/LNju26T7/QmFljBsajoAgcXhNCk4IpNegJr+nKvs=
       SPF_DEFAULT_ADMIN_USER: admin
       SPF_DEFAULT_ADMIN_PASS: admin123
     ports:
@@ -215,39 +216,23 @@ ssh -p 2222 -o StrictHostKeyChecking=no testuser@127.0.0.1 true
 - Host：`ssh-key` 或 `127.0.0.1`
 - Port：容器网络内 `2222`；宿主机连 key 服务用 **`2223`**
 - 用户名：`keyuser`
-- 认证：私钥（fixture 如下）
+- 认证：与下方 `PUBLIC_KEY` 配对的 **OpenSSH 私钥 PEM**（仓库内**不**在 Markdown 中嵌入 PEM 明文，避免 push protection / secret 扫描误报）
 
-```text
------BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACB3TrSG3OBvDyEbyf+IXbMnPoFX7QUvtNZzcO9UOus+SgAAAKg5LEhTOSxI
-UwAAAAtzc2gtZWQyNTUxOQAAACB3TrSG3OBvDyEbyf+IXbMnPoFX7QUvtNZzcO9UOus+Sg
-AAAECFrTqN9xpFgQODXJ1GVDG/0rTHDKFnW/XiOLZIzw3k0XdOtIbc4G8PIRvJ/4hdsyc+
-gVftBS+01nNw71Q66z5KAAAAJXNwZi1sb2NhbC10ZXN0LWtleS1ub3QtZm9yLXByb2R1Y3
-Rpb24=
------END OPENSSH PRIVATE KEY-----
-```
-
-与上述私钥匹配的公钥（即 `ssh-key` 服务环境变量中的 `PUBLIC_KEY`）：
+与 `ssh-key` 服务环境变量 `PUBLIC_KEY` 一致的公钥行：
 
 `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHdOtIbc4G8PIRvJ/4hdsyc+gVftBS+01nNw71Q66z5K spf-local-test-key-not-for-production`
 
-宿主机测试：
+私钥素材为 Base64（UTF-8 PEM 全文）单行文件，见仓库 [`scripts/fixtures/spf-local-test-ed25519-openssh-inline.pem.b64`](../scripts/fixtures/spf-local-test-ed25519-openssh-inline.pem.b64)（说明见同目录 [`README.md`](../scripts/fixtures/README.md)）。
+
+宿主机解码并连通性测试：
 
 ```bash
-cat > /tmp/spf-local-test-key <<'KEY'
------BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACB3TrSG3OBvDyEbyf+IXbMnPoFX7QUvtNZzcO9UOus+SgAAAKg5LEhTOSxI
-UwAAAAtzc2gtZWQyNTUxOQAAACB3TrSG3OBvDyEbyf+IXbMnPoFX7QUvtNZzcO9UOus+Sg
-AAAECFrTqN9xpFgQODXJ1GVDG/0rTHDKFnW/XiOLZIzw3k0XdOtIbc4G8PIRvJ/4hdsyc+
-gVftBS+01nNw71Q66z5KAAAAJXNwZi1sb2NhbC10ZXN0LWtleS1ub3QtZm9yLXByb2R1Y3
-Rpb24=
------END OPENSSH PRIVATE KEY-----
-KEY
-chmod 600 /tmp/spf-local-test-key
-ssh -i /tmp/spf-local-test-key -p 2223 -o StrictHostKeyChecking=no keyuser@127.0.0.1 true
+openssl base64 -d -in scripts/fixtures/spf-local-test-ed25519-openssh-inline.pem.b64 -out /tmp/spf-local-test-key.pem
+chmod 600 /tmp/spf-local-test-key.pem
+ssh -i /tmp/spf-local-test-key.pem -p 2223 -o StrictHostKeyChecking=no keyuser@127.0.0.1 true
 ```
+
+在 SPF UI 中粘贴私钥时，使用解码后的 **`/tmp/spf-local-test-key.pem` 全文**（或你自行解码得到的 PEM 文件内容）。
 
 ## MySQL（方式二）
 

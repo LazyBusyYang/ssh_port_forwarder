@@ -157,6 +157,12 @@ port_range:
 | `SPF_DEFAULT_ADMIN_USER` | 默认管理员用户名（代码读取） | `admin` |
 | `SPF_DEFAULT_ADMIN_PASS` | 默认管理员密码（代码读取） | `admin123` |
 
+#### 升级与文档勘误（环境变量名）
+
+若你曾参照**旧版** README 使用 `SPF_JWT_SECRET_CURRENT`、`SPF_DB_TYPE`、`SPF_SERVER_HOST` 等名称，请注意：在 Viper 的 `BindEnv` / `AutomaticEnv` 规则下，这些名称**从未被应用读取**，服务实际一直依赖 `config.yaml` 或上表中的正确变量名（如 `JWT_SECRET_CURRENT`、`DATABASE_TYPE`、`SERVER_HOST`）。升级后若在 `docker run`、Compose、Kubernetes Deployment 中通过环境变量注入配置，请对照上表逐一核对。**仅使用配置文件且未依赖上述错误变量名的部署不受影响。**
+
+发版与镜像 tag：根目录 `VERSION` 与 CI 推送到 Docker Hub 的 **semver tag** 对齐；自动流水线**不**维护 `:latest`。拉取镜像或填写 Compose 的 `SPF_IMAGE_TAG` 时请使用实际存在的 tag，详见 [docs/CI_RELEASE.md](docs/CI_RELEASE.md)。
+
 ### 生成密钥
 
 **生成 32 字节 Base64 编码的加密密钥：**
@@ -250,7 +256,7 @@ make docker-build
 ### Docker Compose（仓库内正式编排）
 
 ```bash
-cp .env.example .env   # 编辑 .env 填写密钥与 DSN
+cp .env.example .env   # 编辑 .env：密钥、DSN、SPF_IMAGE_TAG（建议与 VERSION 一致 semver）
 docker compose up -d   # 或 make compose-up
 ```
 
