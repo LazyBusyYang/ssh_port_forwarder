@@ -278,6 +278,16 @@
           <p class="text-gray-600">
             确定要删除转发组 <strong>{{ groupToDelete?.name }}</strong> 吗？此操作不可恢复。
           </p>
+          <div v-if="rulesToDelete.length > 0" class="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+            <p class="text-orange-700 text-sm font-medium">
+              该组被 {{ rulesToDelete.length }} 条 Rule 引用：
+            </p>
+            <ul class="text-orange-600 text-sm mt-1 space-y-1">
+              <li v-for="rule in rulesToDelete" :key="rule.id">
+                {{ rule.name || `Rule #${rule.id}` }}
+              </li>
+            </ul>
+          </div>
         </div>
         <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
           <button
@@ -484,6 +494,7 @@ const modalTitle = computed(() => {
 const showDeleteModal = ref(false)
 const deleting = ref(false)
 const groupToDelete = ref<Group | null>(null)
+const rulesToDelete = ref<Rule[]>([])
 
 const showDetailModal = ref(false)
 const groupDetail = ref<Group | null>(null)
@@ -611,8 +622,16 @@ const saveGroup = async () => {
   }
 }
 
-const confirmDelete = (group: Group) => {
+const confirmDelete = async (group: Group) => {
   groupToDelete.value = group
+  rulesToDelete.value = []
+  try {
+    const response = await api.get(`/groups/${group.id}`)
+    const detail = response.data.data as Group
+    rulesToDelete.value = detail.rules || []
+  } catch {
+    // ignore error, proceed without rules info
+  }
   showDeleteModal.value = true
 }
 
