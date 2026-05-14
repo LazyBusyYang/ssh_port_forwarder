@@ -127,10 +127,10 @@
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-gray-700">
-                {{ group.hosts?.length || 0 }}
+                {{ group.host_count ?? 0 }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-gray-700">
-                {{ group.rules?.length || 0 }}
+                {{ group.rule_count ?? 0 }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
                 <button
