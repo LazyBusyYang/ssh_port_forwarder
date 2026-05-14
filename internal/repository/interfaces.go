@@ -26,12 +26,16 @@ type ForwardGroupRepository interface {
 	Create(group *model.ForwardGroup) error
 	FindByID(id uint64) (*model.ForwardGroup, error)
 	FindByIDWithHosts(id uint64) (*model.ForwardGroup, error)
+	FindByName(name string) (*model.ForwardGroup, error)
 	Update(group *model.ForwardGroup) error
 	Delete(id uint64) error
 	List(page, pageSize int) ([]model.ForwardGroup, int64, error)
 	AddHost(groupID, hostID uint64) error
 	RemoveHost(groupID, hostID uint64) error
 	GetHosts(groupID uint64) ([]model.SSHHost, error)
+	GetRules(groupID uint64) ([]model.ForwardRule, error)
+	CountHosts(groupID uint64) (int64, error)
+	ExistsByName(name string) (bool, error)
 }
 
 type ForwardRuleRepository interface {
@@ -41,6 +45,7 @@ type ForwardRuleRepository interface {
 	Delete(id uint64) error
 	List(page, pageSize int) ([]model.ForwardRule, int64, error)
 	ListByGroupID(groupID uint64) ([]model.ForwardRule, error)
+	CountByGroupID(groupID uint64) (int64, error)
 	ListActive() ([]model.ForwardRule, error)
 	FindByLocalPort(port int) (*model.ForwardRule, error)
 	UpdateStatus(id uint64, status string) error

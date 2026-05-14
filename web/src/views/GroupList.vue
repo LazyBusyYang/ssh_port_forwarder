@@ -127,10 +127,10 @@
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-gray-700">
-                {{ group.hosts?.length || 0 }}
+                {{ group.host_count ?? 0 }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-gray-700">
-                {{ group.rules?.length || 0 }}
+                {{ group.rule_count ?? 0 }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
                 <button
@@ -278,6 +278,19 @@
           <p class="text-gray-600">
             确定要删除转发组 <strong>{{ groupToDelete?.name }}</strong> 吗？此操作不可恢复。
           </p>
+          <div
+            v-if="rulesToDelete.length > 0"
+            class="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg"
+          >
+            <p class="text-orange-700 text-sm font-medium">
+              该组被 {{ rulesToDelete.length }} 条 Rule 引用：
+            </p>
+            <ul class="text-orange-600 text-sm mt-1 space-y-1">
+              <li v-for="rule in rulesToDelete" :key="rule.id">
+                {{ rule.name || `Rule #${rule.id}` }}
+              </li>
+            </ul>
+          </div>
         </div>
         <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
           <button
@@ -435,6 +448,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { isAxiosError } from 'axios'
 import api from '../api'
 import { getApiErrorMessage } from '../utils/apiError'
 
@@ -447,6 +461,7 @@ interface Host {
 
 interface Rule {
   id: number
+  name?: string
   local_port: number
   target_host: string
   target_port: number
@@ -458,6 +473,8 @@ interface Group {
   strategy: string
   hosts?: Host[]
   rules?: Rule[]
+  host_count?: number
+  rule_count?: number
 }
 
 const groups = ref<Group[]>([])
@@ -484,6 +501,7 @@ const modalTitle = computed(() => {
 const showDeleteModal = ref(false)
 const deleting = ref(false)
 const groupToDelete = ref<Group | null>(null)
+const rulesToDelete = ref<Rule[]>([])
 
 const showDetailModal = ref(false)
 const groupDetail = ref<Group | null>(null)
@@ -511,6 +529,34 @@ const getStrategyLabel = (strategy?: string) => {
 
 const getStrategyClass = (strategy?: string) => {
   return strategy ? strategyClasses[strategy] || 'bg-gray-100 text-gray-800' : ''
+}
+
+/** DELETE /groups/:id 返回 409 时，将 data.referencing_rules（规则名列表）转为弹窗展示用 Rule 项 */
+function rulesFromDeleteConflict(err: unknown): Rule[] {
+  if (!isAxiosError(err) || err.response?.status !== 409) {
+    return []
+  }
+  const body = err.response.data
+  if (body === null || typeof body !== 'object') {
+    return []
+  }
+  const inner = 'data' in body ? (body as { data?: unknown }).data : undefined
+  if (inner === null || typeof inner !== 'object') {
+    return []
+  }
+  const names = (inner as { referencing_rules?: unknown }).referencing_rules
+  if (!Array.isArray(names)) {
+    return []
+  }
+  return names
+    .filter((x): x is string => typeof x === 'string')
+    .map((name, i) => ({
+      id: -(i + 1),
+      name,
+      local_port: 0,
+      target_host: '',
+      target_port: 0,
+    }))
 }
 
 const fetchGroups = async () => {
@@ -611,8 +657,16 @@ const saveGroup = async () => {
   }
 }
 
-const confirmDelete = (group: Group) => {
+const confirmDelete = async (group: Group) => {
   groupToDelete.value = group
+  rulesToDelete.value = []
+  try {
+    const response = await api.get(`/groups/${group.id}`)
+    const detail = response.data.data as Group
+    rulesToDelete.value = detail.rules || []
+  } catch {
+    // ignore error, proceed without rules info
+  }
   showDeleteModal.value = true
 }
 
@@ -626,6 +680,10 @@ const deleteGroup = async () => {
     groupToDelete.value = null
     fetchGroups()
   } catch (err: unknown) {
+    const from409 = rulesFromDeleteConflict(err)
+    if (from409.length > 0) {
+      rulesToDelete.value = from409
+    }
     error.value = getApiErrorMessage(err, '删除失败')
   } finally {
     deleting.value = false

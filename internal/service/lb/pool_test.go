@@ -121,6 +121,15 @@ func (r *testGroupRepo) FindByIDWithHosts(id uint64) (*model.ForwardGroup, error
 	return r.groups[id], nil
 }
 
+func (r *testGroupRepo) FindByName(name string) (*model.ForwardGroup, error) {
+	for _, g := range r.groups {
+		if g.Name == name {
+			return g, nil
+		}
+	}
+	return nil, nil
+}
+
 func (r *testGroupRepo) Update(group *model.ForwardGroup) error {
 	r.groups[group.ID] = group
 	return nil
@@ -147,12 +156,33 @@ func (r *testGroupRepo) RemoveHost(groupID, hostID uint64) error {
 	return nil
 }
 
+func (r *testGroupRepo) GetRules(groupID uint64) ([]model.ForwardRule, error) {
+	return nil, nil
+}
+
 func (r *testGroupRepo) GetHosts(groupID uint64) ([]model.SSHHost, error) {
 	group := r.groups[groupID]
 	if group == nil {
 		return nil, nil
 	}
 	return group.Hosts, nil
+}
+
+func (r *testGroupRepo) CountHosts(groupID uint64) (int64, error) {
+	group := r.groups[groupID]
+	if group == nil {
+		return 0, nil
+	}
+	return int64(len(group.Hosts)), nil
+}
+
+func (r *testGroupRepo) ExistsByName(name string) (bool, error) {
+	for _, g := range r.groups {
+		if g.Name == name {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 type testRuleRepo struct {
@@ -201,4 +231,8 @@ func (r *testRuleRepo) UpdateActiveHost(id uint64, hostID *uint64) error {
 
 func (r *testRuleRepo) CountActiveByHostID(hostID uint64) (int64, error) {
 	return r.counts[hostID], nil
+}
+
+func (r *testRuleRepo) CountByGroupID(groupID uint64) (int64, error) {
+	return 0, nil
 }

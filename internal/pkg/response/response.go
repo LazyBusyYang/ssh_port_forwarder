@@ -35,6 +35,14 @@ func Error(c *gin.Context, httpStatus int, code int, message string) {
 	})
 }
 
+func ErrorWithData(c *gin.Context, httpStatus int, code int, message string, data interface{}) {
+	c.JSON(httpStatus, gin.H{
+		"code":    code,
+		"message": message,
+		"data":    data,
+	})
+}
+
 func Paged(c *gin.Context, data interface{}, total int64, page, pageSize int) {
 	c.JSON(http.StatusOK, PagedResponse{
 		Code:     0,

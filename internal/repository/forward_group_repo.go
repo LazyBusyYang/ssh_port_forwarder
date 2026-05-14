@@ -30,9 +30,21 @@ func (r *forwardGroupRepository) FindByID(id uint64) (*model.ForwardGroup, error
 	return &group, nil
 }
 
+// FindByIDWithHosts 按 id 加载转发组，并预加载关联的 Hosts 与 Rules（供详情与删除确认等场景）。
 func (r *forwardGroupRepository) FindByIDWithHosts(id uint64) (*model.ForwardGroup, error) {
 	var group model.ForwardGroup
-	if err := r.db.Preload("Hosts").First(&group, id).Error; err != nil {
+	if err := r.db.Preload("Hosts").Preload("Rules").First(&group, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &group, nil
+}
+
+func (r *forwardGroupRepository) FindByName(name string) (*model.ForwardGroup, error) {
+	var group model.ForwardGroup
+	if err := r.db.Where("name = ?", name).First(&group).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
@@ -104,4 +116,29 @@ func (r *forwardGroupRepository) GetHosts(groupID uint64) ([]model.SSHHost, erro
 	}
 
 	return hosts, nil
+}
+
+func (r *forwardGroupRepository) GetRules(groupID uint64) ([]model.ForwardRule, error) {
+	var rules []model.ForwardRule
+	if err := r.db.Where("group_id = ?", groupID).Find(&rules).Error; err != nil {
+		return nil, err
+	}
+	return rules, nil
+}
+
+func (r *forwardGroupRepository) CountHosts(groupID uint64) (int64, error) {
+	var count int64
+	// Host 与 Group 为 many2many（forward_group_hosts），无 ssh_hosts.group_id 列。
+	if err := r.db.Table("forward_group_hosts").Where("forward_group_id = ?", groupID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (r *forwardGroupRepository) ExistsByName(name string) (bool, error) {
+	var count int64
+	if err := r.db.Model(&model.ForwardGroup{}).Where("name = ?", name).Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
