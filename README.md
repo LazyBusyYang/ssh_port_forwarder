@@ -235,7 +235,9 @@ Usage of ./spf-server:
 
 ## 容器化部署
 
-完整说明（本地源码 + SQLite、`docker-compose.yml`、Kubernetes、公开镜像 **`dockersenseyang/ssh_port_forwarder:latest`**、局域网访问方式）见 **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**。
+发版、Docker Hub semver 镜像、手动 **`dev` / `sha-*`** 镜像与 CI Secrets 说明见 **[docs/CI_RELEASE.md](docs/CI_RELEASE.md)**。
+
+其余部署方式（本地源码 + SQLite、`docker-compose.yml`、Kubernetes、局域网访问）见 **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**。公开镜像命名空间为 **`dockersenseyang/ssh_port_forwarder`**；**`latest` 不在自动 CI 中更新**，Compose 文档中的 `latest` 仅作快捷示例，生产请固定 **semver tag** 或你们单独维护的 `latest`。
 
 ### 构建 Docker 镜像
 
@@ -243,7 +245,7 @@ Usage of ./spf-server:
 make docker-build
 ```
 
-或 `docker build -t ssh-port-forwarder:latest .`。与 Docker Hub 上的 `dockersenseyang/ssh_port_forwarder:latest` 可分别使用。
+或 `docker build -t ssh-port-forwarder:latest .`。远程以 **semver tag**（与根目录 `VERSION` 一致）为准；`latest` 见 [CI_RELEASE.md](docs/CI_RELEASE.md)。
 
 ### Docker Compose（仓库内正式编排）
 

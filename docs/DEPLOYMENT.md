@@ -14,11 +14,9 @@
 
 ## 公开镜像
 
-默认使用 Docker Hub 镜像：
+默认使用 Docker Hub 命名空间 **`dockersenseyang/ssh_port_forwarder`**。文档与 Compose 中出现的 **`:latest`** 仅作本地/演示快捷引用；**CI 自动发布只推送与根目录 `VERSION` 一致的 semver tag**（如 `:0.2.0`），**不**更新 `latest`（`latest` 单独维护）。发版与手动 **`dev` / `sha-*`** 镜像流程见 [CI_RELEASE.md](./CI_RELEASE.md)。
 
-`dockersenseyang/ssh_port_forwarder:latest`
-
-本地构建时使用 `make docker-build` 或 `docker build -t ssh-port-forwarder:latest .`，与上述远程镜像 tag 可并存；Compose 与下文 K8s 示例以 **`dockersenseyang/ssh_port_forwarder:latest`** 为准。容器化运行请使用下文 **Docker Compose**。
+本地构建时使用 `make docker-build` 或 `docker build -t ssh-port-forwarder:latest .`，与远程 semver tag 可并存；Compose 与 K8s 示例中请将镜像 tag 换成你们实际使用的版本号。
 
 `Dockerfile` **默认不注入** HTTP(S) 通用代理；`GOPROXY` 默认为官方 `https://proxy.golang.org,direct`（不使用国内镜像等第三方 Go 代理）。若拉模块或 `apk`/`npm` 超时，可自行加 `--build-arg HTTP_PROXY=...`。
 
@@ -84,5 +82,6 @@ kubectl apply -f deploy/kubernetes/deployment.yaml -f deploy/kubernetes/service.
 
 ## 相关文档
 
+- **CI 发版与 Docker Hub**：见 [CI_RELEASE.md](./CI_RELEASE.md)。
 - 在正式 Compose 之上叠加 **SSH fixture、源码级前后端** 等本地测试编排：见 [LOCAL_DOCKER_TEST_ENV.md](./LOCAL_DOCKER_TEST_ENV.md)。
 - 架构与密钥管理建议：见 [ARCHITECTURE.md](./ARCHITECTURE.md)（K8s Secret / Vault 等）。

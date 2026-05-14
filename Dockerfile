@@ -53,6 +53,7 @@ ENV HTTP_PROXY=$HTTP_PROXY \
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 COPY --from=backend-builder /app/spf-server .
+COPY VERSION /app/VERSION
 COPY config/config.yaml.example ./config/config.yaml
 RUN mkdir -p data
 

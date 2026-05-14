@@ -2,13 +2,54 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'release/**'
+    tags:
+      - 'v*'
   pull_request:
     branches: [main]
 
+env:
+  IMAGE_NAME: dockersenseyang/ssh_port_forwarder
+
 jobs:
+  check-version:
+    name: Check VERSION
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate VERSION / tag alignment
+        run: bash scripts/check_version.sh
+
+  release-gate:
+    name: Release gate (semver publish?)
+    needs: [check-version]
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.gate.outputs.publish }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide Docker Hub publish
+        id: gate
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_TYPE: ${{ github.ref_type }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: bash scripts/ci_release_gate.sh
+
   frontend-lint:
     name: Frontend Lint & Format
+    needs: [check-version]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -32,6 +73,7 @@ jobs:
 
   web-embed:
     name: Build web (for go:embed)
+    needs: [check-version]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -58,7 +100,7 @@ jobs:
 
   backend-lint:
     name: Backend Lint
-    needs: web-embed
+    needs: [web-embed]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -82,7 +124,7 @@ jobs:
 
   backend-unit-test:
     name: Backend Unit Tests
-    needs: web-embed
+    needs: [web-embed]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -106,7 +148,7 @@ jobs:
 
   sqlite-integration-test:
     name: SQLite Integration Tests
-    needs: web-embed
+    needs: [web-embed]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -128,7 +170,7 @@ jobs:
 
   mysql-integration-test:
     name: MySQL Integration Tests
-    needs: web-embed
+    needs: [web-embed]
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -171,3 +213,64 @@ jobs:
 
       - name: Run MySQL integration tests
         run: make test-mysql-integration
+
+  docker-publish:
+    name: Publish semver image (Docker Hub)
+    runs-on: ubuntu-latest
+    needs:
+      - check-version
+      - release-gate
+      - frontend-lint
+      - web-embed
+      - backend-lint
+      - backend-unit-test
+      - sqlite-integration-test
+      - mysql-integration-test
+    if: >
+      github.event_name == 'push' &&
+      needs.release-gate.outputs.publish == 'true' &&
+      needs.check-version.result == 'success' &&
+      needs.frontend-lint.result == 'success' &&
+      needs.web-embed.result == 'success' &&
+      needs.backend-lint.result == 'success' &&
+      needs.backend-unit-test.result == 'success' &&
+      needs.sqlite-integration-test.result == 'success' &&
+      needs.mysql-integration-test.result == 'success'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract VERSION and skip if image exists
+        id: meta
+        env:
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '\r\n' < VERSION | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          if docker buildx imagetools inspect "${IMAGE_NAME}:${VERSION}" >/dev/null 2>&1; then
+            echo "Image ${IMAGE_NAME}:${VERSION} already exists; skipping build."
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "skip=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Build and push
+        if: steps.meta.outputs.skip != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          provenance: false
