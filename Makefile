@@ -1,12 +1,10 @@
-.PHONY: build run test clean build-frontend docker-build local-test-up local-test-down local-test-logs local-test-ps local-test-config local-test-clean
+.PHONY: build run test clean build-frontend docker-build compose-up compose-down compose-logs compose-ps compose-config
 
 # Go 参数
 BINARY_NAME=spf-server
 GO=go
 GOFLAGS=-ldflags="-s -w"
 DOCKER_COMPOSE ?= docker compose
-LOCAL_TEST_COMPOSE ?= docker-compose.local-test.yml
-LOCAL_TEST_PROJECT ?= spf-local-test
 
 # 默认目标
 all: build
@@ -44,24 +42,21 @@ clean:
 docker-build:
 	docker build -t ssh-port-forwarder:latest .
 
-# 本地 Docker 测试环境
-local-test-up:
-	$(DOCKER_COMPOSE) -f $(LOCAL_TEST_COMPOSE) -p $(LOCAL_TEST_PROJECT) up -d
+# 根目录 docker-compose.yml（需已复制 .env.example 为 .env 并填写密钥）
+compose-up:
+	$(DOCKER_COMPOSE) up -d
 
-local-test-down:
-	$(DOCKER_COMPOSE) -f $(LOCAL_TEST_COMPOSE) -p $(LOCAL_TEST_PROJECT) down --remove-orphans
+compose-down:
+	$(DOCKER_COMPOSE) down --remove-orphans
 
-local-test-logs:
-	$(DOCKER_COMPOSE) -f $(LOCAL_TEST_COMPOSE) -p $(LOCAL_TEST_PROJECT) logs -f
+compose-logs:
+	$(DOCKER_COMPOSE) logs -f
 
-local-test-ps:
-	$(DOCKER_COMPOSE) -f $(LOCAL_TEST_COMPOSE) -p $(LOCAL_TEST_PROJECT) ps
+compose-ps:
+	$(DOCKER_COMPOSE) ps
 
-local-test-config:
-	$(DOCKER_COMPOSE) -f $(LOCAL_TEST_COMPOSE) -p $(LOCAL_TEST_PROJECT) config
-
-local-test-clean:
-	$(DOCKER_COMPOSE) -f $(LOCAL_TEST_COMPOSE) -p $(LOCAL_TEST_PROJECT) down -v --remove-orphans
+compose-config:
+	$(DOCKER_COMPOSE) config
 
 # CI 相关目标
 lint-frontend:
@@ -93,12 +88,11 @@ help:
 	@echo "  vet                - Run go vet"
 	@echo "  clean              - Clean build artifacts"
 	@echo "  docker-build       - Build Docker image"
-	@echo "  local-test-up      - Start local Docker test stack"
-	@echo "  local-test-down    - Stop local Docker test stack (keep volumes)"
-	@echo "  local-test-logs    - Follow local Docker test stack logs"
-	@echo "  local-test-ps      - Show local Docker test stack status"
-	@echo "  local-test-config  - Render local Docker test stack compose config"
-	@echo "  local-test-clean   - Stop local Docker test stack and remove volumes"
+	@echo "  compose-up         - Start docker-compose.yml stack"
+	@echo "  compose-down       - Stop compose stack (keep volumes)"
+	@echo "  compose-logs       - Follow compose logs"
+	@echo "  compose-ps         - Show compose service status"
+	@echo "  compose-config     - Validate/render compose config"
 	@echo "  lint-frontend      - Run frontend lint and format check"
 	@echo "  lint-backend       - Run backend lint"
 	@echo "  test-sqlite-integration - Run SQLite integration tests"

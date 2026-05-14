@@ -144,18 +144,18 @@ port_range:
 
 | 环境变量 | 说明 | 示例 |
 |---------|------|------|
-| `SPF_SERVER_HOST` | 服务监听地址 | `0.0.0.0` |
-| `SPF_SERVER_PORT` | 服务监听端口 | `8080` |
-| `SPF_DB_TYPE` | 数据库类型 | `mysql` |
-| `SPF_DB_DSN` | MySQL DSN | `user:pass@tcp(host:3306)/db` |
-| `SPF_JWT_SECRET_CURRENT` | JWT 当前密钥 | `your-secret-key` |
-| `SPF_JWT_SECRET_PREVIOUS` | JWT 上一个密钥 | `old-secret-key` |
-| `SPF_ENCRYPTION_KEY` | AES 加密密钥（Base64） | `base64-encoded-32-byte-key` |
+| `SERVER_HOST` | 服务监听地址（Viper 映射 `server.host`） | `0.0.0.0` |
+| `SERVER_PORT` | 服务监听端口（`server.port`） | `8080` |
+| `DATABASE_TYPE` | 数据库类型（`database.type`） | `mysql` |
+| `SPF_DB_DSN` | MySQL DSN（显式绑定） | `user:pass@tcp(host:3306)/db?charset=utf8mb4&parseTime=true&loc=Local` |
+| `JWT_SECRET_CURRENT` | JWT 当前密钥（显式绑定） | `your-secret-key` |
+| `JWT_SECRET_PREVIOUS` | JWT 上一个密钥（显式绑定） | `old-secret-key` |
+| `SPF_ENCRYPTION_KEY` | AES 加密密钥（Base64，显式绑定） | `base64-encoded-32-byte-key` |
 | `SPF_ENCRYPTION_KEY_PREVIOUS` | AES 上一个密钥 | `old-base64-key` |
 | `SPF_PORT_RANGE_MIN` | 端口范围最小值 | `30000` |
 | `SPF_PORT_RANGE_MAX` | 端口范围最大值 | `33000` |
-| `SPF_DEFAULT_ADMIN_USER` | 默认管理员用户名 | `admin` |
-| `SPF_DEFAULT_ADMIN_PASS` | 默认管理员密码 | `admin123` |
+| `SPF_DEFAULT_ADMIN_USER` | 默认管理员用户名（代码读取） | `admin` |
+| `SPF_DEFAULT_ADMIN_PASS` | 默认管理员密码（代码读取） | `admin123` |
 
 ### 生成密钥
 
@@ -235,196 +235,32 @@ Usage of ./spf-server:
 
 ## 容器化部署
 
+完整说明（本地源码 + SQLite、`docker-compose.yml`、Kubernetes、公开镜像 **`dockersenseyang/ssh_port_forwarder:latest`**、局域网访问方式）见 **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**。
+
 ### 构建 Docker 镜像
 
 ```bash
 make docker-build
 ```
 
-或手动构建：
+或 `docker build -t ssh-port-forwarder:latest .`。与 Docker Hub 上的 `dockersenseyang/ssh_port_forwarder:latest` 可分别使用。
+
+### Docker Compose（仓库内正式编排）
 
 ```bash
-docker build -t ssh-port-forwarder:latest .
+cp .env.example .env   # 编辑 .env 填写密钥与 DSN
+docker compose up -d   # 或 make compose-up
 ```
 
-### 运行容器
+根目录 [`docker-compose.yml`](docker-compose.yml) 提供 MySQL + 应用镜像；UI 与 API 同在 **8080** 端口，可通过 `http://<宿主机 IP>:8080` 访问。
 
-**SQLite 模式（单机测试）：**
+### 本地 Docker 测试（SSH fixture / 源码级前后端）
 
-```bash
-docker run -d \
-  --name spf-server \
-  -p 8080:8080 \
-  -v $(pwd)/data:/app/data \
-  -e SPF_JWT_SECRET_CURRENT="your-jwt-secret" \
-  -e SPF_ENCRYPTION_KEY="your-base64-key" \
-  ssh-port-forwarder:latest
-```
+不再维护独立 `docker-compose.local-test.yml`；在正式 Compose 之上扩展或自建编排的步骤见 **[docs/LOCAL_DOCKER_TEST_ENV.md](docs/LOCAL_DOCKER_TEST_ENV.md)**。
 
-**MySQL 模式（生产环境）：**
+### 版本升级（MySQL 生产）
 
-```bash
-docker run -d \
-  --name spf-server \
-  -p 8080:8080 \
-  -e SPF_DB_TYPE=mysql \
-  -e SPF_DB_DSN="user:password@tcp(mysql-host:3306)/spf_db?charset=utf8mb4" \
-  -e SPF_JWT_SECRET_CURRENT="your-jwt-secret" \
-  -e SPF_ENCRYPTION_KEY="your-base64-key" \
-  -e SPF_PORT_RANGE_MIN=30000 \
-  -e SPF_PORT_RANGE_MAX=33000 \
-  ssh-port-forwarder:latest
-```
-
-### Docker Compose 部署
-
-创建 `docker-compose.yml`：
-
-```yaml
-version: '3.8'
-
-services:
-  spf-server:
-    image: ssh-port-forwarder:latest
-    container_name: spf-server
-    ports:
-      - "8080:8080"
-      # 转发端口范围（根据实际需求调整）
-      - "30000-33000:30000-33000"
-    environment:
-      - SPF_DB_TYPE=mysql
-      - SPF_DB_DSN=root:password@tcp(mysql:3306)/spf?charset=utf8mb4
-      - SPF_JWT_SECRET_CURRENT=${JWT_SECRET}
-      - SPF_ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - SPF_PORT_RANGE_MIN=30000
-      - SPF_PORT_RANGE_MAX=33000
-    volumes:
-      - ./data:/app/data
-    depends_on:
-      - mysql
-    restart: unless-stopped
-
-  mysql:
-    image: mysql:8.0
-    container_name: spf-mysql
-    environment:
-      - MYSQL_ROOT_PASSWORD=password
-      - MYSQL_DATABASE=spf
-    volumes:
-      - mysql_data:/var/lib/mysql
-    restart: unless-stopped
-
-volumes:
-  mysql_data:
-```
-
-启动服务：
-
-```bash
-# 设置环境变量
-export JWT_SECRET="your-jwt-secret"
-export ENCRYPTION_KEY="your-base64-key"
-
-# 启动
-docker-compose up -d
-```
-
-### 本地 Docker MySQL（开发 / 验收）
-
-用于在本地以 **MySQL** 验证迁移与「删除转发规则后同一 `local_port` 可再创建」等行为：
-
-```bash
-docker compose -f docker-compose.dev-mysql.yml up -d
-cp config/config.dev-mysql.yaml.example config/config.dev-mysql.yaml
-# 按需修改 DSN、JWT、encryption.key 后：
-go run ./cmd/server/ -config config/config.dev-mysql.yaml
-```
-
-**版本升级（MySQL 生产）**：升级至包含「转发规则物理删除」的版本后，进程在 `AutoMigrate` 成功后会**幂等删除** `forward_rules` 表中历史**仅软删除**残留行（`deleted_at` 非空），以释放 `local_port` 唯一索引，避免再次出现 `1062 Duplicate entry`；表中不再保留上述残留行，操作追溯可依赖审计日志。升级前建议备份 `forward_rules` 表（例如 `mysqldump` 单表）。
-
-### Kubernetes 部署
-
-创建 `deployment.yaml`：
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: spf-server
-  labels:
-    app: spf-server
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: spf-server
-  template:
-    metadata:
-      labels:
-        app: spf-server
-    spec:
-      containers:
-      - name: spf-server
-        image: ssh-port-forwarder:latest
-        ports:
-        - containerPort: 8080
-        env:
-        - name: SPF_DB_TYPE
-          value: "mysql"
-        - name: SPF_DB_DSN
-          valueFrom:
-            secretKeyRef:
-              name: spf-secrets
-              key: db-dsn
-        - name: SPF_JWT_SECRET_CURRENT
-          valueFrom:
-            secretKeyRef:
-              name: spf-secrets
-              key: jwt-secret
-        - name: SPF_ENCRYPTION_KEY
-          valueFrom:
-            secretKeyRef:
-              name: spf-secrets
-              key: encryption-key
-        - name: SPF_PORT_RANGE_MIN
-          value: "30000"
-        - name: SPF_PORT_RANGE_MAX
-          value: "33000"
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: spf-server
-spec:
-  selector:
-    app: spf-server
-  ports:
-  - port: 8080
-    targetPort: 8080
-  type: ClusterIP
-```
-
-创建 Secret：
-
-```bash
-kubectl create secret generic spf-secrets \
-  --from-literal=db-dsn="user:pass@tcp(mysql:3306)/spf?charset=utf8mb4" \
-  --from-literal=jwt-secret="your-jwt-secret" \
-  --from-literal=encryption-key="your-base64-key"
-```
-
-部署：
-
-```bash
-kubectl apply -f deployment.yaml
-```
+升级至包含「转发规则物理删除」的版本后，进程在 `AutoMigrate` 成功后会**幂等删除** `forward_rules` 表中历史**仅软删除**残留行（`deleted_at` 非空），以释放 `local_port` 唯一索引，避免再次出现 `1062 Duplicate entry`；表中不再保留上述残留行，操作追溯可依赖审计日志。升级前建议备份 `forward_rules` 表（例如 `mysqldump` 单表）。
 
 ## API 文档
 
