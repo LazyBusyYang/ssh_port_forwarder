@@ -3,6 +3,10 @@ name: Docker manual (dev / sha-*)
 on:
   workflow_dispatch:
     inputs:
+      git_ref:
+        description: 'Git ref to build (branch, tag, or SHA). Leave empty to use the commit of the branch selected in "Use workflow from".'
+        required: false
+        default: ''
       image_tag:
         description: 'Docker Hub image tag: dev or sha-* (e.g. sha-abc1234)'
         required: true
@@ -20,6 +24,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.git_ref != '' && inputs.git_ref || github.sha }}
+
+      - name: Show resolved revision
+        run: |
+          set -euo pipefail
+          echo "Resolved HEAD: $(git rev-parse HEAD)"
+          git log -1 --oneline
 
       - name: Validate image tag
         env:
