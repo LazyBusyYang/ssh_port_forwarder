@@ -78,46 +78,46 @@
       class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col min-h-0"
     >
       <div class="overflow-x-auto flex-1">
-        <table class="min-w-full divide-y divide-gray-200">
+        <table class="min-w-full divide-y divide-gray-200 table-fixed">
           <thead class="bg-gray-50">
             <tr>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32 sticky left-0 bg-gray-50 z-10"
               >
                 Name
               </th>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
               >
                 Local Port
               </th>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40"
               >
                 Target
               </th>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
               >
                 Protocol
               </th>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Group
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Status
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32"
               >
                 Active Host
               </th>
               <th
-                class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24 sticky left-32 bg-gray-50 z-10"
+              >
+                Group
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
+              >
+                Status
+              </th>
+              <th
+                class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28 sticky right-0 bg-gray-50 z-10"
               >
                 操作
               </th>
@@ -125,32 +125,32 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-for="rule in rules" :key="rule.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+              <td class="px-4 py-3 font-medium text-gray-900 truncate">
                 {{ rule.name || '-' }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+              <td class="px-4 py-3 font-medium text-gray-900">
                 {{ rule.local_port }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-gray-700">
+              <td class="px-4 py-3 text-gray-700 truncate">
                 {{ rule.target_host }}:{{ rule.target_port }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-4 py-3">
                 <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 uppercase">
                   {{ rule.protocol }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-gray-700">
+              <td class="px-4 py-3 text-gray-700 truncate">
+                {{ rule.active_host?.name || '-' }}
+              </td>
+              <td class="px-4 py-3 text-gray-700 truncate">
                 {{ rule.group?.name || '-' }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-4 py-3">
                 <span class="px-2 py-1 text-xs rounded-full" :class="getStatusClass(rule.status)">
                   {{ getStatusLabel(rule.status) }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-gray-700">
-                {{ rule.active_host?.name || '-' }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
+              <td class="px-4 py-3 text-right space-x-2">
                 <button
                   @click="restartRule(rule.id)"
                   :disabled="restartingRuleId === rule.id"

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-viewport min-h-0 bg-gray-100 overflow-hidden">
+  <div class="flex h-viewport min-h-0 bg-gray-100 overflow-hidden" style="overflow-x: hidden;">
     <!-- 左侧边栏 - 响应式：小屏幕时隐藏或变窄 -->
     <aside
       class="bg-gray-900 text-gray-300 flex flex-col flex-shrink-0 transition-all duration-300"
@@ -8,12 +8,13 @@
         'w-16': isMobile && !sidebarCollapsed,
         '-ml-60': isMobile && sidebarCollapsed,
       }"
+      :style="isMobile ? 'position:absolute;height:100%;z-index:40;left:0' : ''"
     >
       <!-- 移动端侧边栏切换按钮 -->
       <button
         v-if="isMobile"
         @click="toggleSidebar"
-        class="absolute -right-10 top-4 bg-gray-900 text-white p-2 rounded-r-lg z-50"
+        class="absolute top-4 right-0 bg-gray-900 text-white p-2 rounded-l-lg z-50 shadow-lg"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -226,7 +227,7 @@
       </header>
 
       <!-- 主内容 - 添加水平和垂直滚动 -->
-      <main class="flex-1 overflow-auto p-4 lg:p-6 min-w-0">
+      <main class="flex-1 overflow-auto p-4 lg:p-6 min-w-0" style="overflow-x: auto;">
         <router-view />
       </main>
     </div>
@@ -248,7 +249,12 @@ const isMobile = ref(false)
 const sidebarCollapsed = ref(true)
 
 const checkScreenSize = () => {
+  const wasMobile = isMobile.value
   isMobile.value = window.innerWidth < 768
+  // F5: 390px ultra-narrow - 默认折叠侧边栏
+  if (window.innerWidth < 480) {
+    sidebarCollapsed.value = true
+  }
 }
 
 const toggleSidebar = () => {
