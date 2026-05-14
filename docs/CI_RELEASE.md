@@ -57,6 +57,7 @@ GitLab CI 若复用同一仓库，可设置环境变量 **`CI_COMMIT_TAG`**（�
 
 - **`git_ref` 留空**：构建你在 **「Use workflow from」** 所选分支上、触发时刻的 **`github.sha`**（与旧行为一致）。
 - **`git_ref` 填写分支名、tag 或 commit SHA**：从 **`main`**（或任意已含本 workflow 的分支）触发时，仍可检出**其他分支**（例如 `feature/my-work`）的最新提交或指定 SHA 再构建镜像，便于在合并进 `main` 前验证 `dev` 镜像。
+- **首尾空白**：workflow 会对输入做**首尾空白裁剪**；若裁剪后为空（含仅输入空格、Tab 等情况），则与留空相同，回退为 **「Use workflow from」** 分支的 **`github.sha`**。仍建议勿故意填仅空白，以免误以为已指定分支。
 - 高级用法：亦可填写 `actions/checkout` 支持的 ref 形式（如 `refs/heads/...`）；Fork PR 的 `refs/pull/*/merge` 等未单独测试，按需自用。
 
 输入 **`image_tag`** 仅允许：

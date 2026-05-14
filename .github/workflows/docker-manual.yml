@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       git_ref:
-        description: 'Git ref to build (branch, tag, or SHA). Leave empty to use the commit of the branch selected in "Use workflow from".'
+        description: 'Git ref to build (branch, tag, or SHA). Leading/trailing whitespace is stripped; all-whitespace falls back to "Use workflow from" HEAD. Leave empty for same.'
         required: false
         default: ''
       image_tag:
@@ -22,14 +22,34 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Resolve checkout ref
+        id: resolve_ref
+        env:
+          GIT_REF_INPUT: ${{ inputs.git_ref }}
+        run: |
+          set -euo pipefail
+          t="${GIT_REF_INPUT#"${GIT_REF_INPUT%%[![:space:]]*}"}"
+          t="${t%"${t##*[![:space:]]}"}"
+          if [ -z "$t" ]; then
+            out="${GITHUB_SHA}"
+          else
+            out="$t"
+          fi
+          {
+            echo 'ref<<__REF_OUT__'
+            printf '%s\n' "$out"
+            echo '__REF_OUT__'
+          } >> "${GITHUB_OUTPUT}"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.git_ref != '' && inputs.git_ref || github.sha }}
+          ref: ${{ steps.resolve_ref.outputs.ref }}
 
       - name: Show resolved revision
         run: |
           set -euo pipefail
+          echo "Checkout ref (after trim / fallback): ${{ steps.resolve_ref.outputs.ref }}"
           echo "Resolved HEAD: $(git rev-parse HEAD)"
           git log -1 --oneline
 
