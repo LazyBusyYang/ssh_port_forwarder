@@ -51,12 +51,23 @@ GitLab CI 若复用同一仓库，可设置环境变量 **`CI_COMMIT_TAG`**（�
 
 工作流：[`.github/workflows/docker-manual.yml`](../.github/workflows/docker-manual.yml)（**Run workflow**）。
 
+**前提**：该 workflow 文件需在仓库 **默认分支（通常为 `main`）** 上存在，才能在 Actions 侧稳定展示并手动触发；若此前仅在功能分支添加过 workflow，会出现「当前分支无 `workflow_dispatch`」类提示。
+
+**检出代码（`git_ref`）**：
+
+- **`git_ref` 留空**：构建你在 **「Use workflow from」** 所选分支上、触发时刻的 **`github.sha`**（与旧行为一致）。
+- **`git_ref` 填写分支名、tag 或 commit SHA**：从 **`main`**（或任意已含本 workflow 的分支）触发时，仍可检出**其他分支**（例如 `feature/my-work`）的最新提交或指定 SHA 再构建镜像，便于在合并进 `main` 前验证 `dev` 镜像。
+- **首尾空白**：workflow 会对输入做**首尾空白裁剪**；若裁剪后为空（含仅输入空格、Tab 等情况），则与留空相同，回退为 **「Use workflow from」** 分支的 **`github.sha`**。仍建议勿故意填仅空白，以免误以为已指定分支。
+- 高级用法：亦可填写 `actions/checkout` 支持的 ref 形式（如 `refs/heads/...`）；Fork PR 的 `refs/pull/*/merge` 等未单独测试，按需自用。
+
 输入 **`image_tag`** 仅允许：
 
 - 固定字符串 **`dev`**，或  
-- 符合 **`^sha-[A-Za-z0-9._-]+$`** 的标签（例如 `sha-abc1234`）。
+- 符合 **`^sha-[A-Za-z0-9._-]+$`** 的标签（例如 `sha-abc1234`）。多人并行验证时建议优先使用 **`sha-*`**，避免反复覆盖共享的 **`dev`** tag。
 
-推送 **`dockersenseyang/ssh_port_forwarder:<image_tag>`**。不要求等待完整 CI 通过（与 ZoeGate manual dev 镜像一致）。
+推送 **`dockersenseyang/ssh_port_forwarder:<image_tag>`**。不要求等待完整 CI 通过（与 ZoeGate manual dev 镜像一致）。能触发本 workflow 的成员即可指定仓库内任意存在的 ref，与现有 Docker Hub 推送权限边界一致，无需新增 Secrets。
+
+**推荐操作（合并前验证）**：Actions → 本 workflow → **Run workflow** → **Use workflow from** 选 **`main`** → **`git_ref`** 填功能分支名 → **`image_tag`** 填 `dev` 或 `sha-<简短标识>` → 在日志 **「Show resolved revision」** 中核对 commit 与预期一致。
 
 ## 发版操作示例（semver）
 
