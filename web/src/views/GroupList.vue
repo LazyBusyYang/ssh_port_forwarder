@@ -448,6 +448,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { isAxiosError } from 'axios'
 import api from '../api'
 import { getApiErrorMessage } from '../utils/apiError'
 
@@ -528,6 +529,34 @@ const getStrategyLabel = (strategy?: string) => {
 
 const getStrategyClass = (strategy?: string) => {
   return strategy ? strategyClasses[strategy] || 'bg-gray-100 text-gray-800' : ''
+}
+
+/** DELETE /groups/:id 返回 409 时，将 data.referencing_rules（规则名列表）转为弹窗展示用 Rule 项 */
+function rulesFromDeleteConflict(err: unknown): Rule[] {
+  if (!isAxiosError(err) || err.response?.status !== 409) {
+    return []
+  }
+  const body = err.response.data
+  if (body === null || typeof body !== 'object') {
+    return []
+  }
+  const inner = 'data' in body ? (body as { data?: unknown }).data : undefined
+  if (inner === null || typeof inner !== 'object') {
+    return []
+  }
+  const names = (inner as { referencing_rules?: unknown }).referencing_rules
+  if (!Array.isArray(names)) {
+    return []
+  }
+  return names
+    .filter((x): x is string => typeof x === 'string')
+    .map((name, i) => ({
+      id: -(i + 1),
+      name,
+      local_port: 0,
+      target_host: '',
+      target_port: 0,
+    }))
 }
 
 const fetchGroups = async () => {
@@ -651,6 +680,10 @@ const deleteGroup = async () => {
     groupToDelete.value = null
     fetchGroups()
   } catch (err: unknown) {
+    const from409 = rulesFromDeleteConflict(err)
+    if (from409.length > 0) {
+      rulesToDelete.value = from409
+    }
     error.value = getApiErrorMessage(err, '删除失败')
   } finally {
     deleting.value = false

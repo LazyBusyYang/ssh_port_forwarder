@@ -67,8 +67,16 @@ func (h *GroupHandler) List(c *gin.Context) {
 	// 组装带计数的列表项
 	items := make([]GroupListItem, 0, len(groups))
 	for _, g := range groups {
-		hostCount, _ := h.container.GroupRepo.CountHosts(g.ID)
-		ruleCount, _ := h.container.RuleRepo.CountByGroupID(g.ID)
+		hostCount, err := h.container.GroupRepo.CountHosts(g.ID)
+		if err != nil {
+			response.Error(c, http.StatusInternalServerError, 500, "failed to count group hosts: "+err.Error())
+			return
+		}
+		ruleCount, err := h.container.RuleRepo.CountByGroupID(g.ID)
+		if err != nil {
+			response.Error(c, http.StatusInternalServerError, 500, "failed to count group rules: "+err.Error())
+			return
+		}
 		items = append(items, GroupListItem{
 			ID:        g.ID,
 			Name:      g.Name,
