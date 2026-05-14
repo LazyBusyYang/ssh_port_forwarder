@@ -36,7 +36,18 @@ type AddHostRequest struct {
 	HostID uint64 `json:"host_id" binding:"required"`
 }
 
-// List 分页查询转发组列表
+// GroupListItem 包含计数信息的转发组列表项
+type GroupListItem struct {
+	ID        uint64 `json:"id"`
+	Name      string `json:"name"`
+	Strategy  string `json:"strategy"`
+	HostCount int64  `json:"host_count"`
+	RuleCount int64  `json:"rule_count"`
+	CreatedAt int64  `json:"created_at"`
+	UpdatedAt int64  `json:"updated_at"`
+}
+
+// List 分页查询转发组列表（带 host_count / rule_count）
 func (h *GroupHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
@@ -53,7 +64,23 @@ func (h *GroupHandler) List(c *gin.Context) {
 		return
 	}
 
-	response.Paged(c, groups, total, page, pageSize)
+	// 组装带计数的列表项
+	items := make([]GroupListItem, 0, len(groups))
+	for _, g := range groups {
+		hostCount, _ := h.container.GroupRepo.CountHosts(g.ID)
+		ruleCount, _ := h.container.RuleRepo.CountByGroupID(g.ID)
+		items = append(items, GroupListItem{
+			ID:        g.ID,
+			Name:      g.Name,
+			Strategy:  g.Strategy,
+			HostCount: hostCount,
+			RuleCount: ruleCount,
+			CreatedAt: g.CreatedAt,
+			UpdatedAt: g.UpdatedAt,
+		})
+	}
+
+	response.Paged(c, items, total, page, pageSize)
 }
 
 // Create 创建转发组
@@ -73,6 +100,17 @@ func (h *GroupHandler) Create(c *gin.Context) {
 	// 校验策略
 	if err := validator.ValidateStrategy(strategy); err != nil {
 		response.Error(c, http.StatusBadRequest, 400, err.Error())
+		return
+	}
+
+	// F3: 检查名称唯一性
+	exists, err := h.container.GroupRepo.ExistsByName(req.Name)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, 500, "failed to check name: "+err.Error())
+		return
+	}
+	if exists {
+		response.Error(c, http.StatusConflict, 409, "Group 名称已存在，请使用其他名称")
 		return
 	}
 

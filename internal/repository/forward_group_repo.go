@@ -113,3 +113,19 @@ func (r *forwardGroupRepository) GetRules(groupID uint64) ([]model.ForwardRule, 
 	}
 	return rules, nil
 }
+
+func (r *forwardGroupRepository) CountHosts(groupID uint64) (int64, error) {
+	var count int64
+	if err := r.db.Model(&model.SSHHost{}).Where("group_id = ?", groupID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (r *forwardGroupRepository) ExistsByName(name string) (bool, error) {
+	var count int64
+	if err := r.db.Model(&model.ForwardGroup{}).Where("name = ?", name).Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

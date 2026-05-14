@@ -33,6 +33,8 @@ type ForwardGroupRepository interface {
 	RemoveHost(groupID, hostID uint64) error
 	GetHosts(groupID uint64) ([]model.SSHHost, error)
 	GetRules(groupID uint64) ([]model.ForwardRule, error)
+	CountHosts(groupID uint64) (int64, error)
+	ExistsByName(name string) (bool, error)
 }
 
 type ForwardRuleRepository interface {
