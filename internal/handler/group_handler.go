@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -161,6 +162,66 @@ func (h *GroupHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	// Step 1: 检查是否有 Rule 引用该 Group（Option A 严格模式）
+	ruleCount, err := h.container.RuleRepo.CountByGroupID(id)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, 500, "failed to check rule references: "+err.Error())
+		return
+	}
+	if ruleCount > 0 {
+		// 返回 HTTP 409，包含关联 Rule 列表
+		rules, err := h.container.RuleRepo.ListByGroupID(id)
+		if err != nil {
+			response.Error(c, http.StatusInternalServerError, 500, "failed to list referencing rules: "+err.Error())
+			return
+		}
+		ruleNames := make([]string, 0, len(rules))
+		for _, r := range rules {
+			ruleNames = append(ruleNames, r.Name)
+		}
+		response.ErrorWithData(c, http.StatusConflict, 409,
+			fmt.Sprintf("该 Group 正被 %d 条 Rule 引用，删除后将导致转发规则失效", ruleCount),
+			gin.H{"referencing_rules": ruleNames})
+		return
+	}
+
+	// Step 2: 获取 Group 信息用于 metrics 清理
+	group, err := h.container.GroupRepo.FindByID(id)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, 500, "failed to find group: "+err.Error())
+		return
+	}
+	if group == nil {
+		response.Error(c, http.StatusNotFound, 404, "group not found")
+		return
+	}
+
+	// Step 3: 清理 metrics — Host 相关
+	hosts, err := h.container.GroupRepo.GetHosts(id)
+	if err == nil {
+		for _, host := range hosts {
+			metrics.SPFHostGroupInfo.DeleteLabelValues(
+				strconv.FormatUint(host.ID, 10),
+				host.Name,
+				strconv.FormatUint(id, 10),
+				group.Name,
+			)
+		}
+	}
+
+	// Step 4: 清理 metrics — Rule 相关（虽然上面已检查无 Rule，为防 race condition 仍做清理）
+	rules, err := h.container.GroupRepo.GetRules(id)
+	if err == nil {
+		for _, rule := range rules {
+			metrics.CleanupRule(
+				strconv.FormatUint(rule.ID, 10),
+				rule.Name,
+				strconv.FormatUint(id, 10),
+			)
+		}
+	}
+
+	// Step 5: 删除 Group
 	if err := h.container.GroupRepo.Delete(id); err != nil {
 		response.Error(c, http.StatusInternalServerError, 500, "failed to delete group: "+err.Error())
 		return

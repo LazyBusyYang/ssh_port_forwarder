@@ -64,6 +64,14 @@ func (r *forwardRuleRepository) ListByGroupID(groupID uint64) ([]model.ForwardRu
 	return rules, nil
 }
 
+func (r *forwardRuleRepository) CountByGroupID(groupID uint64) (int64, error) {
+	var count int64
+	if err := r.db.Model(&model.ForwardRule{}).Where("group_id = ?", groupID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *forwardRuleRepository) ListActive() ([]model.ForwardRule, error) {
 	var rules []model.ForwardRule
 	if err := r.db.Where("status = ?", "active").Find(&rules).Error; err != nil {

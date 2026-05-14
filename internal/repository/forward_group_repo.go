@@ -105,3 +105,11 @@ func (r *forwardGroupRepository) GetHosts(groupID uint64) ([]model.SSHHost, erro
 
 	return hosts, nil
 }
+
+func (r *forwardGroupRepository) GetRules(groupID uint64) ([]model.ForwardRule, error) {
+	var rules []model.ForwardRule
+	if err := r.db.Where("group_id = ?", groupID).Find(&rules).Error; err != nil {
+		return nil, err
+	}
+	return rules, nil
+}
