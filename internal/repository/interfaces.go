@@ -26,6 +26,7 @@ type ForwardGroupRepository interface {
 	Create(group *model.ForwardGroup) error
 	FindByID(id uint64) (*model.ForwardGroup, error)
 	FindByIDWithHosts(id uint64) (*model.ForwardGroup, error)
+	FindByName(name string) (*model.ForwardGroup, error)
 	Update(group *model.ForwardGroup) error
 	Delete(id uint64) error
 	List(page, pageSize int) ([]model.ForwardGroup, int64, error)

@@ -41,6 +41,17 @@ func (r *forwardGroupRepository) FindByIDWithHosts(id uint64) (*model.ForwardGro
 	return &group, nil
 }
 
+func (r *forwardGroupRepository) FindByName(name string) (*model.ForwardGroup, error) {
+	var group model.ForwardGroup
+	if err := r.db.Where("name = ?", name).First(&group).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &group, nil
+}
+
 func (r *forwardGroupRepository) Update(group *model.ForwardGroup) error {
 	return r.db.Save(group).Error
 }

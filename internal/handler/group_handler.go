@@ -174,6 +174,18 @@ func (h *GroupHandler) Update(c *gin.Context) {
 
 	// 更新字段
 	if req.Name != "" {
+		// F3: 检查名称唯一性（排除自身）
+		if req.Name != group.Name {
+			existing, err := h.container.GroupRepo.FindByName(req.Name)
+			if err != nil {
+				response.Error(c, http.StatusInternalServerError, 500, "failed to check name: "+err.Error())
+				return
+			}
+			if existing != nil && existing.ID != id {
+				response.Error(c, http.StatusConflict, 409, "Group 名称已存在，请使用其他名称")
+				return
+			}
+		}
 		group.Name = req.Name
 	}
 	if req.Strategy != "" {
