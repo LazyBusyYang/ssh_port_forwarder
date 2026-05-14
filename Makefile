@@ -1,9 +1,10 @@
-.PHONY: build run test clean build-frontend docker-build
+.PHONY: build run test clean build-frontend docker-build compose-up compose-down compose-logs compose-ps compose-config
 
 # Go 参数
 BINARY_NAME=spf-server
 GO=go
 GOFLAGS=-ldflags="-s -w"
+DOCKER_COMPOSE ?= docker compose
 
 # 默认目标
 all: build
@@ -41,6 +42,22 @@ clean:
 docker-build:
 	docker build -t ssh-port-forwarder:latest .
 
+# 根目录 docker-compose.yml（需已复制 .env.example 为 .env 并填写密钥）
+compose-up:
+	$(DOCKER_COMPOSE) up -d
+
+compose-down:
+	$(DOCKER_COMPOSE) down --remove-orphans
+
+compose-logs:
+	$(DOCKER_COMPOSE) logs -f
+
+compose-ps:
+	$(DOCKER_COMPOSE) ps
+
+compose-config:
+	$(DOCKER_COMPOSE) config
+
 # CI 相关目标
 lint-frontend:
 	cd web && npm run lint
@@ -71,6 +88,11 @@ help:
 	@echo "  vet                - Run go vet"
 	@echo "  clean              - Clean build artifacts"
 	@echo "  docker-build       - Build Docker image"
+	@echo "  compose-up         - Start docker-compose.yml stack"
+	@echo "  compose-down       - Stop compose stack (keep volumes)"
+	@echo "  compose-logs       - Follow compose logs"
+	@echo "  compose-ps         - Show compose service status"
+	@echo "  compose-config     - Validate/render compose config"
 	@echo "  lint-frontend      - Run frontend lint and format check"
 	@echo "  lint-backend       - Run backend lint"
 	@echo "  test-sqlite-integration - Run SQLite integration tests"

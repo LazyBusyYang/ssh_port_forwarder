@@ -861,7 +861,7 @@ type PagedResponse struct {
 
 - SSH Host 的密码或私钥使用 **AES-256-GCM** 对称加密后存入数据库 `AuthData` 字段
 - 加密密钥（32 字节）通过环境变量 `SPF_ENCRYPTION_KEY` 注入，**不存入数据库**
-- 生产环境密钥来源：K8S Secret 或 HashiCorp Vault
+- 生产环境密钥来源：K8S Secret 或 HashiCorp Vault（仓库内最小 K8s 编排示例见 `deploy/kubernetes/`）
 - 每条记录使用独立随机 Nonce（存储在 `AuthNonce` 字段），确保相同明文产生不同密文
 - 密钥轮转：更新 `SPF_ENCRYPTION_KEY` 后，系统启动时自动检测并重新加密所有凭证（需同时提供 `SPF_ENCRYPTION_KEY_PREVIOUS`）
 
