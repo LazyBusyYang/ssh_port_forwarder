@@ -278,7 +278,10 @@
           <p class="text-gray-600">
             确定要删除转发组 <strong>{{ groupToDelete?.name }}</strong> 吗？此操作不可恢复。
           </p>
-          <div v-if="rulesToDelete.length > 0" class="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+          <div
+            v-if="rulesToDelete.length > 0"
+            class="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg"
+          >
             <p class="text-orange-700 text-sm font-medium">
               该组被 {{ rulesToDelete.length }} 条 Rule 引用：
             </p>
@@ -457,6 +460,7 @@ interface Host {
 
 interface Rule {
   id: number
+  name?: string
   local_port: number
   target_host: string
   target_port: number
@@ -468,6 +472,8 @@ interface Group {
   strategy: string
   hosts?: Host[]
   rules?: Rule[]
+  host_count?: number
+  rule_count?: number
 }
 
 const groups = ref<Group[]>([])

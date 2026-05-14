@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-viewport min-h-0 bg-gray-100 overflow-hidden" style="overflow-x: hidden;">
+  <div class="flex h-viewport min-h-0 bg-gray-100 overflow-hidden" style="overflow-x: hidden">
     <!-- 左侧边栏 - 响应式：小屏幕时隐藏或变窄 -->
     <aside
       class="bg-gray-900 text-gray-300 flex flex-col flex-shrink-0 transition-all duration-300"
@@ -227,7 +227,7 @@
       </header>
 
       <!-- 主内容 - 添加水平和垂直滚动 -->
-      <main class="flex-1 overflow-auto p-4 lg:p-6 min-w-0" style="overflow-x: auto;">
+      <main class="flex-1 overflow-auto p-4 lg:p-6 min-w-0" style="overflow-x: auto">
         <router-view />
       </main>
     </div>
@@ -249,7 +249,6 @@ const isMobile = ref(false)
 const sidebarCollapsed = ref(true)
 
 const checkScreenSize = () => {
-  const wasMobile = isMobile.value
   isMobile.value = window.innerWidth < 768
   // F5: 390px ultra-narrow - 默认折叠侧边栏
   if (window.innerWidth < 480) {
