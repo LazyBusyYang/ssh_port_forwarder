@@ -209,13 +209,10 @@ func (p *Pool) HandleFailover(hostID uint64) {
 func (p *Pool) failoverRule(rule *model.ForwardRule) error {
 	oldHostID := rule.ActiveHostIDUint()
 
-	// 1. 停止旧转发
-	if oldHostID != 0 {
-		if err := p.sshManager.StopForwardRule(rule.ID, oldHostID); err != nil {
-			log.Printf("[LB Pool] Failed to stop old forward for rule %d on host %d: %v",
-				rule.ID, oldHostID, err)
-			// 继续处理，不要中断
-		}
+	// 1. 停止所有运行时旧转发。数据库 Host 归属可能滞后，不能作为唯一依据。
+	if _, err := p.sshManager.StopForwardRuleEverywhere(rule.ID); err != nil {
+		log.Printf("[LB Pool] Failed to stop all old forwards for rule %d: %v", rule.ID, err)
+		// 继续处理，不要中断
 	}
 
 	// 2. 选择新 Host

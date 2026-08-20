@@ -85,5 +85,5 @@ kubectl apply -f deploy/kubernetes/namespace.yaml -f deploy/kubernetes/deploymen
 ## 相关文档
 
 - **CI 发版与 Docker Hub**：见 [CI_RELEASE.md](./CI_RELEASE.md)。
-- 在正式 Compose 之上叠加 **SSH fixture、源码级前后端** 等本地测试编排：见 [LOCAL_DOCKER_TEST_ENV.md](./LOCAL_DOCKER_TEST_ENV.md)。
+- 使用独立的源码级 backend、frontend、MySQL 与 SSH fixture 本地编排：见 [LOCAL_ENV_GUIDE.md](./LOCAL_ENV_GUIDE.md)。
 - 架构与密钥管理建议：见 [ARCHITECTURE.md](./ARCHITECTURE.md)（K8s Secret / Vault 等）。

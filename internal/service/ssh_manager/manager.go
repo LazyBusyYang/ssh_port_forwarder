@@ -1,6 +1,7 @@
 package ssh_manager
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -122,9 +123,20 @@ func (m *Manager) ConnectHost(host *model.SSHHost) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// 检查是否已连接
-	if client, exists := m.clients[host.ID]; exists && client.IsConnected() {
-		return nil
+	// 不可用的旧 client 可能仍持有本地 listener。替换前必须完整断开，
+	// 否则新 client 会覆盖 map 中的唯一引用，留下无法再回收的孤儿端口。
+	if client, exists := m.clients[host.ID]; exists {
+		switch client.State() {
+		case ConnStateConnected:
+			return nil
+		case ConnStateConnecting, ConnStateReconnecting:
+			return fmt.Errorf("host %d connection is %s", host.ID, client.State())
+		default:
+			if err := client.Disconnect(); err != nil {
+				return fmt.Errorf("failed to clean up stale client for host %d: %w", host.ID, err)
+			}
+			delete(m.clients, host.ID)
+		}
 	}
 
 	// 构建 SSH 配置
@@ -202,6 +214,33 @@ func (m *Manager) StopForwardRule(ruleID uint64, hostID uint64) error {
 	}
 
 	return nil
+}
+
+// StopForwardRuleEverywhere stops every in-memory forward registered for a rule.
+// The database active_host_id can lag behind runtime failover/reconnect state, so
+// restart and delete paths must not rely on that field as the sole owner lookup.
+func (m *Manager) StopForwardRuleEverywhere(ruleID uint64) (int, error) {
+	m.mu.RLock()
+	clients := make(map[uint64]*SSHClient, len(m.clients))
+	for hostID, client := range m.clients {
+		clients[hostID] = client
+	}
+	m.mu.RUnlock()
+
+	stopped := 0
+	var stopErrors []error
+	for hostID, client := range clients {
+		if client.GetForward(ruleID) == nil {
+			continue
+		}
+		if err := client.StopForward(ruleID); err != nil {
+			stopErrors = append(stopErrors, fmt.Errorf("host %d: %w", hostID, err))
+			continue
+		}
+		stopped++
+	}
+
+	return stopped, errors.Join(stopErrors...)
 }
 
 // parsePrivateKey 解析私钥，支持多种格式：
