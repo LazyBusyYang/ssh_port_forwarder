@@ -24,7 +24,7 @@ func (c *SSHClient) StartForward(rule *model.ForwardRule) error {
 	remoteAddr := fmt.Sprintf("%s:%d", rule.TargetHost, rule.TargetPort)
 
 	// 创建监听器
-	listener, err := net.Listen("tcp", localAddr)
+	listener, err := c.createListener(localAddr)
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", localAddr, err)
 	}
@@ -43,7 +43,7 @@ func (c *SSHClient) StartForward(rule *model.ForwardRule) error {
 	c.forwards[rule.ID] = entry
 
 	// 启动监听 goroutine
-	go c.acceptConnections(entry)
+	go c.acceptConnections(listener, entry.stopCh, localAddr, remoteAddr)
 
 	log.Printf("[SSHClient] Started forward rule %d: %s -> %s via %s@%s:%d",
 		rule.ID, localAddr, remoteAddr, c.host.Username, c.host.Host, c.host.Port)
@@ -81,6 +81,58 @@ func (c *SSHClient) StopAllForwards() {
 	log.Printf("[SSHClient] Stopped all forward rules")
 }
 
+// SuspendAllForwards closes listeners while retaining their entries as the
+// authoritative reconnect recovery set. StopForward can remove an entry while
+// reconnect is in progress, which prevents a deleted or restarted rule from
+// being restored later.
+func (c *SSHClient) SuspendAllForwards() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for _, entry := range c.forwards {
+		c.stopForwardEntry(entry)
+	}
+
+	log.Printf("[SSHClient] Suspended all forward rules")
+}
+
+// RestoreSuspendedForwards restores only entries that are still registered.
+// Holding c.mu across listener creation closes the race where StopForward could
+// delete a rule after it was selected for recovery but before the listener was
+// published.
+func (c *SSHClient) RestoreSuspendedForwards() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for ruleID, entry := range c.forwards {
+		entry.mu.Lock()
+		if entry.active {
+			entry.mu.Unlock()
+			continue
+		}
+
+		listener, err := c.createListener(entry.LocalAddr)
+		if err != nil {
+			entry.mu.Unlock()
+			log.Printf("[SSHClient] Failed to recreate listener for rule %d on %s: %v",
+				ruleID, entry.LocalAddr, err)
+			continue
+		}
+
+		entry.listener = listener
+		entry.stopCh = make(chan struct{})
+		entry.active = true
+		stopCh := entry.stopCh
+		localAddr := entry.LocalAddr
+		remoteAddr := entry.RemoteAddr
+		entry.mu.Unlock()
+
+		go c.acceptConnections(listener, stopCh, localAddr, remoteAddr)
+		log.Printf("[SSHClient] Restored forward rule %d: %s -> %s",
+			ruleID, localAddr, remoteAddr)
+	}
+}
+
 // GetForward 获取转发条目
 func (c *SSHClient) GetForward(ruleID uint64) *ForwardEntry {
 	c.mu.RLock()
@@ -100,28 +152,29 @@ func (c *SSHClient) GetAllForwards() map[uint64]*ForwardEntry {
 	return result
 }
 
-// acceptConnections 接受连接并处理
-func (c *SSHClient) acceptConnections(entry *ForwardEntry) {
+// acceptConnections handles exactly one immutable listener generation. A
+// reconnect publishes a new generation instead of changing the resources read
+// by an existing accept loop.
+func (c *SSHClient) acceptConnections(
+	listener net.Listener,
+	stopCh <-chan struct{},
+	localAddr string,
+	remoteAddr string,
+) {
 	for {
 		select {
-		case <-entry.stopCh:
+		case <-stopCh:
 			return
 		default:
-		}
-
-		// 设置接受超时，以便定期检查 stopCh
-		listener := entry.listener
-		if listener == nil {
-			return
 		}
 
 		localConn, err := listener.Accept()
 		if err != nil {
 			select {
-			case <-entry.stopCh:
+			case <-stopCh:
 				return
 			default:
-				log.Printf("[SSHClient] Accept error on %s: %v", entry.LocalAddr, err)
+				log.Printf("[SSHClient] Accept error on %s: %v", localAddr, err)
 				continue
 			}
 		}
@@ -135,12 +188,12 @@ func (c *SSHClient) acceptConnections(entry *ForwardEntry) {
 		}
 
 		// 处理连接
-		go handleConnection(localConn, entry.RemoteAddr, client, entry.stopCh)
+		go handleConnection(localConn, remoteAddr, client, stopCh)
 	}
 }
 
 // handleConnection 处理单个连接的双向转发
-func handleConnection(localConn net.Conn, remoteAddr string, client *ssh.Client, stopCh chan struct{}) {
+func handleConnection(localConn net.Conn, remoteAddr string, client *ssh.Client, stopCh <-chan struct{}) {
 	defer func() {
 		_ = localConn.Close() // ignore close error
 	}()

@@ -261,12 +261,10 @@ func (h *RuleHandler) Delete(c *gin.Context) {
 
 	prevActiveHostID := rule.ActiveHostIDUint()
 
-	// 如果规则处于 active 状态，先停止转发
-	if rule.Status == "active" && prevActiveHostID > 0 {
-		if err := h.container.SSHManager.StopForwardRule(rule.ID, prevActiveHostID); err != nil {
-			// 记录错误但继续删除
-			log.Printf("[RuleHandler] Failed to stop forward rule %d on host %d during delete: %v", rule.ID, prevActiveHostID, err)
-		}
+	// 数据库 active_host_id 可能滞后于运行时状态，按 rule ID 清理所有 client。
+	if _, err := h.container.SSHManager.StopForwardRuleEverywhere(rule.ID); err != nil {
+		// 记录错误但继续删除
+		log.Printf("[RuleHandler] Failed to stop all forwards for rule %d during delete: %v", rule.ID, err)
 	}
 
 	if err := h.container.RuleRepo.Delete(id); err != nil {
@@ -306,12 +304,10 @@ func (h *RuleHandler) Restart(c *gin.Context) {
 
 	prevActiveHostID := rule.ActiveHostIDUint()
 
-	// 停止旧的转发
-	if prevActiveHostID > 0 {
-		if err := h.container.SSHManager.StopForwardRule(rule.ID, prevActiveHostID); err != nil {
-			// 记录错误但继续
-			log.Printf("[RuleHandler] Failed to stop forward rule %d on host %d during restart: %v", rule.ID, prevActiveHostID, err)
-		}
+	// 数据库 active_host_id 可能滞后于运行时状态，按 rule ID 清理所有 client。
+	if _, err := h.container.SSHManager.StopForwardRuleEverywhere(rule.ID); err != nil {
+		// 记录错误但继续，让后续启动返回更具体的错误。
+		log.Printf("[RuleHandler] Failed to stop all forwards for rule %d during restart: %v", rule.ID, err)
 	}
 
 	// 重新分配 Host 并启动转发

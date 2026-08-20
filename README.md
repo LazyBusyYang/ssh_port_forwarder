@@ -264,7 +264,7 @@ docker compose up -d   # 或 make compose-up
 
 ### 本地 Docker 测试（SSH fixture / 源码级前后端）
 
-不再维护独立 `docker-compose.local-test.yml`；在正式 Compose 之上扩展或自建编排的步骤见 **[docs/LOCAL_DOCKER_TEST_ENV.md](docs/LOCAL_DOCKER_TEST_ENV.md)**。
+根目录 [`spf-local-dev.yml`](spf-local-dev.yml) 提供源码级 backend、frontend、MySQL 与 SSH fixture，是本地开发和功能验收的统一编排入口。启动方式和测试账号见 **[docs/LOCAL_ENV_GUIDE.md](docs/LOCAL_ENV_GUIDE.md)**。
 
 ### 版本升级（MySQL 生产）
 

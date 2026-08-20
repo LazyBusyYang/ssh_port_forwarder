@@ -53,13 +53,15 @@ type ForwardEntry struct {
 
 // SSHClient 代表与一个 SSH Host 的连接会话
 type SSHClient struct {
-	mu        sync.RWMutex
-	client    *ssh.Client
-	host      *model.SSHHost
-	state     ConnState
-	forwards  map[uint64]*ForwardEntry // ruleID -> ForwardEntry
-	stopCh    chan struct{}
-	sshConfig *ssh.ClientConfig
+	mu               sync.RWMutex
+	client           *ssh.Client
+	host             *model.SSHHost
+	state            ConnState
+	forwards         map[uint64]*ForwardEntry // ruleID -> ForwardEntry
+	stopCh           chan struct{}
+	sshConfig        *ssh.ClientConfig
+	reconnectRunning bool
+	listenerFactory  func(string) (net.Listener, error)
 }
 
 // NewSSHClient 创建新的 SSHClient 实例
@@ -70,6 +72,9 @@ func NewSSHClient(host *model.SSHHost, sshConfig *ssh.ClientConfig) *SSHClient {
 		forwards:  make(map[uint64]*ForwardEntry),
 		stopCh:    make(chan struct{}),
 		sshConfig: sshConfig,
+		listenerFactory: func(addr string) (net.Listener, error) {
+			return net.Listen("tcp", addr)
+		},
 	}
 }
 
@@ -109,7 +114,11 @@ func (c *SSHClient) Disconnect() error {
 	defer c.mu.Unlock()
 
 	// 通知所有 goroutine 停止
-	close(c.stopCh)
+	select {
+	case <-c.stopCh:
+	default:
+		close(c.stopCh)
+	}
 
 	// 停止所有转发
 	for ruleID, entry := range c.forwards {
@@ -189,9 +198,6 @@ func (c *SSHClient) keepAlive() {
 				log.Printf("[SSHClient] KeepAlive failed for %s@%s:%d: %v",
 					c.host.Username, c.host.Host, c.host.Port, err)
 
-				// 设置状态为重连中
-				c.SetState(ConnStateReconnecting)
-
 				// 启动重连循环
 				go c.StartReconnectLoop()
 				return
@@ -217,7 +223,7 @@ func (c *SSHClient) stopForwardEntry(entry *ForwardEntry) {
 }
 
 // copyData 在两个连接之间双向复制数据
-func copyData(localConn, remoteConn net.Conn, stopCh chan struct{}) {
+func copyData(localConn, remoteConn net.Conn, stopCh <-chan struct{}) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
